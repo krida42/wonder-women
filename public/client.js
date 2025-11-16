@@ -26,6 +26,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     setDefaultDepartureTime();
     setupEventListeners();
     await loadGoogleMapsAPI();
+    
+    // Déclencher automatiquement la géolocalisation au chargement
+    autoGetCurrentLocation();
 });
 
 // Charger l'API Google Maps et initialiser l'autocomplétion
@@ -117,7 +120,50 @@ function setupEventListeners() {
     document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
 }
 
-// Utiliser la position actuelle de l'utilisateur
+// Géolocalisation automatique au chargement de la page
+async function autoGetCurrentLocation() {
+    const originInput = document.getElementById('origin');
+    
+    // Vérifier si la géolocalisation est supportée
+    if (!navigator.geolocation) {
+        console.log('⚠️ Géolocalisation non supportée par ce navigateur');
+        return;
+    }
+    
+    // Afficher un indicateur de chargement dans le champ
+    originInput.placeholder = '📍 Détection de votre position...';
+    
+    try {
+        // Obtenir la position
+        const position = await new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(resolve, reject, {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            });
+        });
+        
+        const { latitude, longitude } = position.coords;
+        console.log(`📍 Position automatique obtenue: ${latitude}, ${longitude}`);
+        
+        // Géocoder inversement pour obtenir l'adresse
+        await reverseGeocode(latitude, longitude, originInput);
+        
+        showNotification('📍 Votre position actuelle a été détectée automatiquement', 'success');
+        
+    } catch (error) {
+        console.log('⚠️ Géolocalisation automatique échouée:', error.message);
+        
+        // Restaurer le placeholder par défaut
+        originInput.placeholder = 'Ex: Tour Eiffel, Paris';
+        
+        // Ne pas afficher de notification d'erreur pour ne pas déranger l'utilisateur
+        // L'utilisateur peut toujours utiliser le bouton manuel ou taper une adresse
+        
+    }
+}
+
+// Utiliser la position actuelle de l'utilisateur (bouton manuel)
 async function useCurrentLocation() {
     const locationBtn = document.getElementById('useLocationBtn');
     const originInput = document.getElementById('origin');

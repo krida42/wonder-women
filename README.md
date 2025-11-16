@@ -57,12 +57,22 @@ http://localhost:3000
 
 ### 📍 Saisie du trajet
 
-**Option 1 : Utiliser votre position actuelle**
-1. Cliquer sur le bouton 📍 à côté du champ "Origine"
-2. Autoriser l'accès à votre position dans le navigateur
-3. Votre adresse actuelle sera automatiquement remplie
+**Géolocalisation automatique**
+- Au chargement de la page, votre position actuelle est **automatiquement détectée** et remplie dans le champ "Origine"
+- Si vous autorisez l'accès à votre position, l'adresse sera géocodée automatiquement
+- Sinon, vous pouvez toujours saisir une adresse manuellement ou utiliser le bouton 📍
 
-**Option 2 : Saisir une adresse manuellement**
+**Option 1 : Position automatique (recommandé)**
+1. Ouvrir l'application
+2. Autoriser l'accès à votre position quand le navigateur le demande
+3. Votre adresse actuelle sera automatiquement remplie dans "Origine"
+
+**Option 2 : Bouton de géolocalisation manuel**
+1. Cliquer sur le bouton 📍 à côté du champ "Origine"
+2. Autoriser l'accès à votre position
+3. Votre adresse actuelle sera remplie
+
+**Option 3 : Saisir une adresse manuellement**
 1. Commencer à taper une adresse dans le champ "Origine" (ex: "Tour Eiffel, Paris")
 2. Sélectionner une suggestion dans la liste d'autocomplétion
 3. Répéter pour la destination (ex: "Musée du Louvre, Paris")

@@ -29,13 +29,23 @@
 - [x] Créer un bouton pour utiliser la position actuelle
 - [x] Implémenter le géocodage inverse (coordonnées → adresse)
 - [x] Gérer les permissions et erreurs de géolocalisation
+- [x] **Géolocalisation automatique au chargement de la page**
+- [x] Détection automatique de la position sans clic sur le bouton
+- [x] Gestion silencieuse des erreurs (pas de notification intrusive)
 
 ## 🔄 Étapes Suivantes
 
-- [ ] Tester la géolocalisation dans le navigateur
-- [ ] Vérifier l'autocomplétion d'adresses
+- [ ] Tester la géolocalisation automatique au chargement
+- [ ] Vérifier que l'adresse d'origine est remplie automatiquement
+- [ ] Tester l'autocomplétion d'adresses
 - [ ] Tester le matching en temps réel avec plusieurs utilisateurs
 - [ ] Tester avec différents modes de transport
+
+## ✨ Améliorations récentes
+
+- ✅ **Géolocalisation automatique** : La position de l'utilisateur est détectée automatiquement au chargement de la page
+- ✅ **UX améliorée** : Plus besoin de cliquer sur le bouton 📍, l'origine est pré-remplie
+- ✅ **Gestion d'erreurs silencieuse** : Si la géolocalisation échoue, l'utilisateur peut toujours saisir manuellement
 
 ## 📝 Notes
 
