@@ -1,25 +1,26 @@
-# Maps MVP - Application de Matching de Trajets en Temps Réel
+# 💜 Wonder Women - Rentrez en Sécurité Ensemble
 
-Application simple de matching de trajets entre utilisateurs en temps réel utilisant Socket.io et Google Maps Directions API.
+Application mobile de matching de trajets en temps réel pour aider les femmes à rentrer en sécurité après une soirée. Trouvez des personnes qui rentrent dans votre direction et voyagez ensemble !
 
-## Fonctionnalités
+## 🛡️ Fonctionnalités
 
-- 🚀 **Matching de trajets en temps réel** entre utilisateurs
-- 📍 **Calcul d'itinéraires** via Google Maps Directions API
-- 🔍 **Autocomplétion d'adresses** avec Google Places API
-- 🌍 **Géolocalisation** : Utilisation de la position actuelle comme point de départ
-- 🗺️ **Géocodage automatique** : Conversion adresses ↔ coordonnées
-- 🔄 **Communication temps réel** avec Socket.io
-- 📊 **Calcul de similarité** basé sur polylines et proximité temporelle
-- 🎯 **Interface intuitive** avec suggestions d'adresses en temps réel
-- 🗺️ **Visualisation sur carte** avec Leaflet
+- 💜 **Sécurité avant tout** : Trouvez des compagnes de route pour rentrer ensemble
+- 🚀 **Matching en temps réel** : Connexion instantanée avec d'autres personnes
+- 📍 **Géolocalisation automatique** : Votre position est détectée automatiquement
+- 🗺️ **Calcul d'itinéraires intelligents** : Via Google Maps Directions API
+- 🔍 **Autocomplétion d'adresses** : Suggestions en temps réel avec Google Places API
+- 📊 **Matching précis** : Basé sur la similarité des trajets et l'heure de départ
+- 💬 **Interface moderne** : Design pensé pour les jeunes femmes
+- 🔄 **Temps réel** : Mises à jour instantanées via Socket.io
+- 🗺️ **Visualisation sur carte** : Carte interactive avec Leaflet
 
 ## Stack Technique
 
 - **Backend**: Node.js + Express + Socket.io
 - **Frontend**: HTML/CSS/JavaScript vanilla
-- **API**: Google Maps Directions API
+- **APIs**: Google Maps (Directions, Places, Geocoding)
 - **Calculs géométriques**: Turf.js
+- **Carte**: Leaflet
 
 ## Installation
 
@@ -37,6 +38,7 @@ npm install
 3. Configurer la clé API Google Maps
 - Copier `.env.example` vers `.env`
 - Remplacer `YOUR_API_KEY_HERE` par votre clé API Google Maps
+- Activer les APIs : Directions, Places, Geocoding
 
 4. Lancer le serveur
 ```bash
@@ -53,51 +55,39 @@ npm run dev
 http://localhost:3000
 ```
 
-## Utilisation
+## 💡 Comment ça marche ?
 
-### 📍 Saisie du trajet
+### 1️⃣ Votre position est détectée automatiquement
+- Au chargement de la page, l'application détecte votre position actuelle
+- Autorisez l'accès à votre localisation pour une expérience optimale
+- Vous pouvez aussi saisir une adresse manuellement
 
-**Géolocalisation automatique**
-- Au chargement de la page, votre position actuelle est **automatiquement détectée** et remplie dans le champ "Origine"
-- Si vous autorisez l'accès à votre position, l'adresse sera géocodée automatiquement
-- Sinon, vous pouvez toujours saisir une adresse manuellement ou utiliser le bouton 📍
+### 2️⃣ Indiquez où vous allez
+1. **D'où partez-vous ?** - Votre position actuelle (détectée automatiquement)
+2. **Où allez-vous ?** - Entrez votre destination (ex: "Gare du Nord, Paris")
+3. **Comment rentrez-vous ?** - Métro, à pied, vélo, voiture...
+4. **Quand partez-vous ?** - Sélectionnez l'heure de départ
 
-**Option 1 : Position automatique (recommandé)**
-1. Ouvrir l'application
-2. Autoriser l'accès à votre position quand le navigateur le demande
-3. Votre adresse actuelle sera automatiquement remplie dans "Origine"
+### 3️⃣ Trouvez vos compagnes de route
+- Cliquez sur **"💜 Trouver des compagnes de route"**
+- L'application trouve automatiquement les personnes qui :
+  - Rentrent dans la même direction que vous
+  - Partent à peu près au même moment
+  - Utilisent le même mode de transport
 
-**Option 2 : Bouton de géolocalisation manuel**
-1. Cliquer sur le bouton 📍 à côté du champ "Origine"
-2. Autoriser l'accès à votre position
-3. Votre adresse actuelle sera remplie
+### 4️⃣ Voyez les matches en temps réel
+- **Score de similarité** : Plus il est élevé, plus le trajet est proche du vôtre
+- **Détails du trajet** : Origine, destination, heure de départ
+- **Carte interactive** : Visualisez tous les trajets
+- **Mises à jour en direct** : Nouvelles personnes qui se connectent
 
-**Option 3 : Saisir une adresse manuellement**
-1. Commencer à taper une adresse dans le champ "Origine" (ex: "Tour Eiffel, Paris")
-2. Sélectionner une suggestion dans la liste d'autocomplétion
-3. Répéter pour la destination (ex: "Musée du Louvre, Paris")
+## 🛡️ Conseils de sécurité
 
-### 🚀 Lancer le matching
-
-4. Sélectionner le mode de transport (transit+marche par défaut)
-5. Choisir l'heure de départ
-6. Cliquer sur "Trouver des matches"
-7. Voir en temps réel les autres utilisateurs avec leur pourcentage de similarité
-
-### 📊 Comprendre les résultats
-
-Chaque match affiche :
-- **Score global** (0-100%) : Similarité globale du trajet
-- **Distance moyenne** : Distance entre les deux trajets
-- **Chevauchement** : Pourcentage de trajet en commun
-- **Score spatial** : Similarité géographique
-- **Score temporel** : Proximité de l'heure de départ
-
-**Note**: 
-- L'application utilise **Google Maps Geocoding API** pour convertir les adresses en coordonnées
-- L'**autocomplétion d'adresses** utilise **Google Places API** pour suggérer des adresses pendant la saisie
-- La **géolocalisation** utilise l'API Geolocation du navigateur (nécessite HTTPS en production)
-- Sans clé API configurée, l'autocomplétion est désactivée et des coordonnées aléatoires autour de Paris sont utilisées
+- ✅ Restez toujours en groupe dans les lieux publics
+- ✅ Partagez votre position en temps réel avec un proche
+- ✅ Gardez votre téléphone chargé et accessible
+- ✅ Faites confiance à votre instinct
+- ✅ En cas d'urgence : 17 (Police) ou 112
 
 ## Architecture
 
@@ -109,22 +99,38 @@ maps_mvp/
 │   └── matching.js        # Calcul de similarité
 └── public/
     ├── index.html         # Interface utilisateur
-    ├── style.css          # Styles
+    ├── style.css          # Styles modernes
     └── client.js          # Logique frontend + Socket.io
 ```
 
 ## Algorithme de Matching
 
 Le score de similarité (0-100%) est calculé en combinant:
-- **Similarité de trajet** (70%): Distance moyenne entre les polylines
-- **Proximité temporelle** (30%): Différence d'heure de départ
+- **Similarité spatiale** (70%): Distance moyenne entre les polylines + chevauchement
+- **Proximité temporelle** (30%): Différence d'heure de départ (fenêtre de 2h)
 
-## Notes
+Plus le score est élevé, plus les trajets sont similaires et les personnes peuvent voyager ensemble en sécurité.
 
-- Pas de base de données: les trajets sont stockés en mémoire
-- Les données sont perdues au redémarrage du serveur
-- MVP pour tester le concept de matching en temps réel
+## 🎨 Design
+
+L'interface a été spécialement conçue pour les jeunes femmes avec :
+- Palette de couleurs rose/violet rassurante
+- Typographie moderne (Inter)
+- Animations fluides et élégantes
+- Messages de sécurité intégrés
+- Interface intuitive et accessible
+
+## Notes Techniques
+
+- **Pas de base de données** : Les trajets sont stockés en mémoire (MVP)
+- **Données volatiles** : Perdues au redémarrage du serveur
+- **Géolocalisation** : Nécessite HTTPS en production
+- **APIs Google Maps** : Clé API requise pour fonctionnement complet
 
 ## Licence
 
 ISC
+
+---
+
+💜 **Wonder Women** - Parce que rentrer en sécurité est un droit, pas un privilège

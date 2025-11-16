@@ -2,87 +2,97 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Maps MVP - Matching de Trajets</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#ff6b9d">
+    <title>Wonder Women - Rentrez en sécurité 💜</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 </head>
 <body>
     <div class="container">
         <header>
-            <h1>🗺️ Maps MVP</h1>
-            <p class="subtitle">Matching de trajets en temps réel</p>
+            <h1>💜 Wonder Women</h1>
+            <p class="subtitle">Rentrez en sécurité, ensemble</p>
             <div class="status-bar">
                 <span class="status-indicator" id="connectionStatus">
                     <span class="dot"></span>
-                    Connexion...
+                    <span>Connexion...</span>
                 </span>
                 <span class="users-count">
-                    👥 <span id="usersCount">0</span> utilisateur(s) connecté(s)
+                    <span>👭</span>
+                    <span><span id="usersCount">0</span> en ligne</span>
                 </span>
             </div>
         </header>
 
         <main>
+            <!-- Safety Banner -->
+            <div class="safety-banner">
+                <h3>🛡️ Votre sécurité avant tout</h3>
+                <p>Trouvez des personnes qui rentrent dans votre direction</p>
+            </div>
+
             <!-- Formulaire de trajet -->
             <section class="trip-form-section">
-                <h2>📍 Votre trajet</h2>
                 <form id="tripForm">
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="userName">Nom (optionnel)</label>
-                            <input type="text" id="userName" placeholder="Votre nom">
+                            <label for="userName">💁‍♀️ Prénom (optionnel)</label>
+                            <input type="text" id="userName" placeholder="Ex: Sarah">
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="origin">📍 Adresse d'origine</label>
+                            <label for="origin">📍 D'où partez-vous ?</label>
                             <div class="input-with-button">
-                                <input type="text" id="origin" placeholder="Ex: Tour Eiffel, Paris" required>
-                                <button type="button" class="btn-location" id="useLocationBtn" title="Utiliser ma position actuelle">
+                                <input type="text" id="origin" placeholder="Votre position..." required>
+                                <button type="button" class="btn-location" id="useLocationBtn" title="Ma position">
                                     📍
                                 </button>
                             </div>
-                            <small class="hint-text">Entrez une adresse ou utilisez votre position actuelle</small>
+                            <small class="hint-text">Position détectée automatiquement</small>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="destination">🎯 Adresse de destination</label>
-                            <input type="text" id="destination" placeholder="Ex: Musée du Louvre, Paris" required>
-                            <small class="hint-text">Entrez une adresse complète</small>
+                            <label for="destination">🏠 Où allez-vous ?</label>
+                            <input type="text" id="destination" placeholder="Votre destination" required>
                         </div>
                     </div>
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="mode">Mode de transport</label>
+                            <label for="mode">🚶‍♀️ Comment ?</label>
                             <select id="mode">
-                                <option value="transit">Transit + Marche</option>
-                                <option value="driving">Voiture</option>
-                                <option value="walking">Marche</option>
-                                <option value="bicycling">Vélo</option>
+                                <option value="transit">🚇 Métro / Bus</option>
+                                <option value="walking">🚶‍♀️ À pied</option>
+                                <option value="bicycling">🚴‍♀️ Vélo</option>
+                                <option value="driving">🚗 Voiture / Taxi</option>
                             </select>
                         </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
-                            <label for="departureTime">Heure de départ</label>
+                            <label for="departureTime">🕐 Quand ?</label>
                             <input type="datetime-local" id="departureTime" required>
                         </div>
                     </div>
 
                     <button type="submit" class="btn-primary" id="submitBtn">
-                        🔍 Trouver des matches
+                        💜 Trouver des compagnes
                     </button>
                 </form>
 
-                <!-- Exemples de trajets -->
-                <div class="examples">
-                    <p><strong>Exemples de trajets à Paris :</strong></p>
-                    <button class="btn-example" onclick="fillExample1()">Tour Eiffel → Musée du Louvre</button>
-                    <button class="btn-example" onclick="fillExample2()">Gare du Nord → Gare Montparnasse</button>
-                    <button class="btn-example" onclick="fillExample3()">Place de la République → Place de la Bastille</button>
+                <!-- Exemples cachés -->
+                <div class="examples" style="display: none;">
+                    <button class="btn-example" onclick="fillExample1()">Tour Eiffel → Louvre</button>
+                    <button class="btn-example" onclick="fillExample2()">Gare du Nord → Montparnasse</button>
+                    <button class="btn-example" onclick="fillExample3()">République → Bastille</button>
                 </div>
             </section>
 
@@ -92,27 +102,38 @@
                 <div class="trip-info" id="tripInfo"></div>
             </section>
 
-            <!-- Carte -->
-            <section class="map-section">
-                <h2>🗺️ Visualisation</h2>
+            <!-- Carte cachée sur mobile -->
+            <section class="map-section" style="display: none;">
                 <div id="map"></div>
             </section>
 
             <!-- Liste des matches -->
             <section class="matches-section">
-                <h2>🎯 Matches trouvés</h2>
+                <h2>👭 Compagnes de route</h2>
                 <div class="matches-header">
-                    <span id="matchesCount">0 match trouvé</span>
+                    <span id="matchesCount">0 personne</span>
                     <button class="btn-refresh" id="refreshBtn" style="display: none;">
-                        🔄 Actualiser
+                        🔄
                     </button>
                 </div>
                 <div id="matchesList" class="matches-list">
                     <div class="no-matches">
-                        <p>Aucun match pour le moment.</p>
-                        <p class="hint">Attendez que d'autres utilisateurs se connectent ou ajustez votre trajet.</p>
+                        <p>🔍 Recherche en cours...</p>
+                        <p class="hint">D'autres personnes vont bientôt se connecter</p>
                     </div>
                 </div>
+            </section>
+
+            <!-- Safety Tips -->
+            <section class="safety-tips">
+                <h4>🛡️ Conseils de sécurité</h4>
+                <ul>
+                    <li>Restez en groupe dans les lieux publics</li>
+                    <li>Partagez votre position avec un proche</li>
+                    <li>Gardez votre téléphone chargé</li>
+                    <li>Faites confiance à votre instinct</li>
+                    <li>Urgence : 17 (Police) ou 112</li>
+                </ul>
             </section>
 
             <!-- Notifications -->
@@ -120,7 +141,7 @@
         </main>
 
         <footer>
-            <p>Maps MVP - Matching de trajets en temps réel avec Socket.io</p>
+            <p>💜 Wonder Women - Rentrez en sécurité</p>
         </footer>
     </div>
 
