@@ -27,11 +27,11 @@ let safePlaceMarkers = new Map();
 
 // Safe places data - Locations in Paris with different types
 const SAFE_PLACES_DATA = [
-    { id: 1, name: "Café du Marais", type: "bar", lat: 48.8566, lng: 2.3622, emoji: "🍷" },
-    { id: 2, name: "Pharmacie Centrale", type: "pharmacy", lat: 48.8620, lng: 2.3480, emoji: "💊" },
-    { id: 3, name: "Boulangerie Ronde", type: "bakery", lat: 48.8500, lng: 2.3500, emoji: "🥐" },
-    { id: 4, name: "La Bistrot d'Amis", type: "restaurant", lat: 48.8700, lng: 2.3450, emoji: "🍽️" },
-    { id: 5, name: "Bar le Sunset", type: "bar", lat: 48.8580, lng: 2.3600, emoji: "🍸" }
+    { id: 1, name: "Café du Marais", type: "bar", lat: 48.8595, lng: 2.3640, emoji: "🍷" },
+    { id: 2, name: "Pharmacie Centrale", type: "pharmacie", lat: 48.8585, lng: 2.3510, emoji: "💊" },
+    { id: 3, name: "Boulangerie Ronde", type: "boulangerie", lat: 48.8555, lng: 2.3480, emoji: "🥐" },
+    { id: 4, name: "La Bistrot d'Amis", type: "restaurant", lat: 48.8620, lng: 2.3520, emoji: "🍽️" },
+    { id: 5, name: "Bar le Sunset", type: "bar", lat: 48.8575, lng: 2.3600, emoji: "🍸" }
 ];
 
 // Initialisation de la carte Google Maps avec l'API native
@@ -982,11 +982,13 @@ function displaySafePlacesOnMap() {
                 place.lat,
                 place.lng
             );
+            const typeTranslated = getTypeTranslation(place.type);
+            const distanceText = distance < 1000 ? Math.round(distance) + ' m' : (distance / 1000).toFixed(1) + ' km';
             const infoWindow = new google.maps.InfoWindow({
                 content: `<div style="padding: 8px; font-size: 12px;">
                     <strong>${place.emoji} ${place.name}</strong><br/>
-                    Type: ${place.type}<br/>
-                    Distance: ${distance.toFixed(1)}m
+                    Type: ${typeTranslated}<br/>
+                    Distance: ${distanceText}
                 </div>`
             });
             infoWindow.open(nearbyMap, marker);
@@ -1006,6 +1008,19 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
               Math.sin(dLon/2) * Math.sin(dLon/2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     return R * c;
+}
+
+// Traduire les types de lieux sûrs
+function getTypeTranslation(type) {
+    const translations = {
+        'bar': 'Bar',
+        'restaurant': 'Restaurant',
+        'pharmacie': 'Pharmacie',
+        'boulangerie': 'Boulangerie',
+        'pharmacy': 'Pharmacie',
+        'bakery': 'Boulangerie'
+    };
+    return translations[type] || type;
 }
 
 // Afficher la liste des lieux sûrs triés par distance
@@ -1037,16 +1052,20 @@ function displaySafePlaces() {
         return;
     }
 
-    listContainer.innerHTML = placesWithDistance.map(place => `
+    listContainer.innerHTML = placesWithDistance.map(place => {
+        const typeTranslated = getTypeTranslation(place.type);
+        const distanceText = place.distance < 1000 ? Math.round(place.distance) + ' m' : (place.distance / 1000).toFixed(1) + ' km';
+        return `
         <div class="safe-place-item">
             <div class="safe-place-emoji">${place.emoji}</div>
             <div class="safe-place-info">
                 <div class="safe-place-name">${place.name}</div>
-                <div class="safe-place-type">${place.type}</div>
+                <div class="safe-place-type">${typeTranslated}</div>
             </div>
-            <div class="safe-place-distance">${place.distance < 1000 ? Math.round(place.distance) + 'm' : (place.distance / 1000).toFixed(1) + 'km'}</div>
+            <div class="safe-place-distance">${distanceText}</div>
         </div>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Afficher marqueurs
