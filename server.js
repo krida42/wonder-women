@@ -97,11 +97,9 @@ io.on('connection', (socket) => {
     const currentUserPos = userPositions.get(socket.id);
     const nearbyUsers = [];
     
-    // Parcourir tous les utilisateurs connectés
-    trips.forEach((trip, userId) => {
+    // Parcourir TOUTES les positions (pas seulement ceux avec trajets)
+    userPositions.forEach((userPos, userId) => {
       if (userId !== socket.id) {
-        const userPos = userPositions.get(userId);
-        
         let distance = null;
         
         // Calculer la distance si les deux positions sont disponibles
@@ -114,14 +112,18 @@ io.on('connection', (socket) => {
           );
         }
         
+        // Récupérer les infos du trajet si disponible
+        const trip = trips.get(userId);
+        const userName = trip ? trip.userName : `User-${userId.substring(0, 6)}`;
+        
         nearbyUsers.push({
           userId: userId,
-          userName: trip.userName,
-          position: userPos || null,
+          userName: userName,
+          position: userPos,
           distance: distance,
-          hasTrip: true,
-          mode: trip.mode,
-          departureTime: trip.departureTime
+          hasTrip: trip ? true : false,
+          mode: trip ? trip.mode : null,
+          departureTime: trip ? trip.departureTime : null
         });
       }
     });
@@ -281,6 +283,25 @@ io.on('connection', (socket) => {
       socket.emit('matches_update', { matches });
       console.log(`🔄 Matches recalculés pour ${userTrip.userName}`);
     }
+  });
+
+  // Envoi de message
+  socket.on('send_message', (data) => {
+    const { to, message, timestamp } = data;
+    
+    // Récupérer les infos de l'expéditeur
+    const senderTrip = trips.get(socket.id);
+    const senderName = senderTrip ? senderTrip.userName : `User-${socket.id.substring(0, 6)}`;
+    
+    console.log(`💬 Message de ${senderName} vers ${to}: ${message}`);
+    
+    // Envoyer le message au destinataire
+    io.to(to).emit('receive_message', {
+      from: socket.id,
+      fromName: senderName,
+      message: message,
+      timestamp: timestamp || new Date().toISOString()
+    });
   });
 
   // Déconnexion

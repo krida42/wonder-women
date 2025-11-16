@@ -13,6 +13,8 @@ let googleMapsApiKey = '';
 let userMarkers = new Map();
 let currentUserPosition = null;
 let myMarker = null;
+let currentChatUserId = null;
+let currentChatUserName = null;
 
 // Initialisation de la carte Leaflet (trajet)
 function initMap() {
@@ -93,6 +95,15 @@ function setupEventListeners() {
     });
     
     document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
+    
+    // Chat
+    document.getElementById('closeChatBtn').addEventListener('click', closeChat);
+    document.getElementById('sendMessageBtn').addEventListener('click', sendMessage);
+    document.getElementById('chatInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            sendMessage();
+        }
+    });
 }
 
 // Changer de tab
@@ -355,7 +366,6 @@ async function handleTripSubmit(e) {
 
 // Afficher utilisateurs à proximité
 function displayNearbyUsers(users) {
-    const nearbyList = document.getElementById('nearbyUsersList');
     const nearbyCount = document.getElementById('nearbyCount');
     
     nearbyCount.textContent = users.length;
@@ -365,36 +375,10 @@ function displayNearbyUsers(users) {
     userMarkers.clear();
     
     if (users.length === 0) {
-        nearbyList.innerHTML = `
-            <div class="no-nearby">
-                <p>🔍 Aucune utilisatrice à proximité</p>
-                <p class="hint">Soyez la première connectée !</p>
-            </div>
-        `;
         return;
     }
     
-    nearbyList.innerHTML = '';
-    
     users.forEach(user => {
-        // Liste
-        const userDiv = document.createElement('div');
-        userDiv.className = 'nearby-user';
-        
-        const distance = user.distance ? `${(user.distance / 1000).toFixed(1)} km` : '?';
-        const hasTrip = user.hasTrip ? '🚶‍♀️ En trajet' : '📍 En ligne';
-        
-        userDiv.innerHTML = `
-            <div class="nearby-user-avatar">👤</div>
-            <div class="nearby-user-info">
-                <div class="nearby-user-name">${user.userName}</div>
-                <div class="nearby-user-status">${hasTrip}</div>
-            </div>
-            <div class="nearby-user-distance">${distance}</div>
-        `;
-        
-        nearbyList.appendChild(userDiv);
-        
         // Marqueur sur la carte
         if (user.position) {
             const markerIcon = L.divIcon({
@@ -403,9 +387,17 @@ function displayNearbyUsers(users) {
                 iconSize: [35, 35]
             });
             
+            const distance = user.distance ? `${(user.distance / 1000).toFixed(1)} km` : '?';
+            const hasTrip = user.hasTrip ? '🚶‍♀️ En trajet' : '📍 En ligne';
+            
             const marker = L.marker([user.position.lat, user.position.lon], { icon: markerIcon })
                 .addTo(nearbyMap)
                 .bindPopup(`<b>${user.userName}</b><br>${hasTrip}<br>${distance}`);
+            
+            // Ajouter un événement de clic sur le marqueur
+            marker.on('click', () => {
+                openChat(user.userId, user.userName);
+            });
             
             userMarkers.set(user.userId, marker);
         }
@@ -548,6 +540,103 @@ function formatDateTime(dateString) {
     });
 }
 
+// Ouvrir le chat
+function openChat(userId, userName) {
+    currentChatUserId = userId;
+    currentChatUserName = userName;
+    
+    const chatModal = document.getElementById('chatModal');
+    const chatUserName = document.getElementById('chatUserName');
+    const chatMessages = document.getElementById('chatMessages');
+    
+    chatUserName.textContent = userName;
+    chatModal.classList.add('active');
+    
+    // Réinitialiser les messages (afficher le message de bienvenue)
+    chatMessages.innerHTML = `
+        <div class="chat-welcome">
+            <p>💬 Commencez la conversation</p>
+            <p class="hint">Soyez respectueuse et bienveillante</p>
+        </div>
+    `;
+    
+    // Focus sur l'input
+    document.getElementById('chatInput').focus();
+    
+    console.log(`💬 Chat ouvert avec ${userName} (${userId})`);
+}
+
+// Fermer le chat
+function closeChat() {
+    const chatModal = document.getElementById('chatModal');
+    chatModal.classList.remove('active');
+    currentChatUserId = null;
+    currentChatUserName = null;
+    
+    // Vider l'input
+    document.getElementById('chatInput').value = '';
+}
+
+// Envoyer un message
+function sendMessage() {
+    const chatInput = document.getElementById('chatInput');
+    const message = chatInput.value.trim();
+    
+    if (!message || !currentChatUserId) {
+        return;
+    }
+    
+    // Envoyer via socket
+    socket.emit('send_message', {
+        to: currentChatUserId,
+        message: message,
+        timestamp: new Date().toISOString()
+    });
+    
+    // Afficher le message envoyé
+    displayMessage(message, 'sent');
+    
+    // Vider l'input
+    chatInput.value = '';
+    chatInput.focus();
+    
+    console.log(`📤 Message envoyé à ${currentChatUserName}: ${message}`);
+}
+
+// Afficher un message dans le chat
+function displayMessage(message, type = 'received', timestamp = null) {
+    const chatMessages = document.getElementById('chatMessages');
+    
+    // Supprimer le message de bienvenue s'il existe
+    const welcome = chatMessages.querySelector('.chat-welcome');
+    if (welcome) {
+        welcome.remove();
+    }
+    
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `chat-message ${type}`;
+    
+    const time = timestamp ? new Date(timestamp) : new Date();
+    const timeString = time.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    
+    messageDiv.innerHTML = `
+        <div class="chat-message-text">${escapeHtml(message)}</div>
+        <div class="chat-message-time">${timeString}</div>
+    `;
+    
+    chatMessages.appendChild(messageDiv);
+    
+    // Scroll vers le bas
+    chatMessages.scrollTop = chatMessages.scrollHeight;
+}
+
+// Échapper le HTML pour éviter les injections XSS
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
 // Notifications
 function showNotification(message, type = 'info') {
     const notifications = document.getElementById('notifications');
@@ -645,6 +734,18 @@ socket.on('user_left', (data) => {
     console.log('👋 Parti:', data.userName);
     showNotification(`${data.userName} est parti`, 'info');
     requestNearbyUsers();
+});
+
+socket.on('receive_message', (data) => {
+    console.log('📨 Message reçu:', data);
+    
+    // Si le chat avec cet utilisateur est ouvert, afficher le message
+    if (currentChatUserId === data.from) {
+        displayMessage(data.message, 'received', data.timestamp);
+    } else {
+        // Sinon, afficher une notification
+        showNotification(`💬 Message de ${data.fromName}`, 'info');
+    }
 });
 
 socket.on('error', (data) => {

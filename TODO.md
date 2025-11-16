@@ -40,6 +40,40 @@
 - [x] **Palette de couleurs** : Rose/violet rassurante
 - [x] **Messages de sécurité** : Banner et conseils intégrés
 
+## ✅ Chat Feature Implementation - COMPLETED
+
+### Phase 1: Remove Nearby Users List
+- [x] Remove `.nearby-list` section from HTML
+- [x] Update nearby view to show only map
+- [x] Add map info overlay with user count
+
+### Phase 2: Add Chat Interface
+- [x] Add chat modal structure to HTML
+- [x] Style chat interface (modal, messages, input)
+- [x] Make chat responsive for mobile
+- [x] Add animations (slide up, fade in)
+
+### Phase 3: Implement Click-to-Chat
+- [x] Add click handlers on map markers
+- [x] Create openChat() function
+- [x] Create closeChat() function
+- [x] Remove list display logic
+- [x] Add hover effect on markers
+
+### Phase 4: Socket.io Messaging
+- [x] Add send_message event handler in server
+- [x] Add receive_message event in server
+- [x] Implement sendMessage() in client
+- [x] Add socket listener for incoming messages
+- [x] Add XSS protection (escapeHtml)
+- [x] Add notification for messages when chat is closed
+
+### Phase 5: Final Adjustments
+- [x] Update map to full height
+- [x] Add timestamp to messages
+- [x] Auto-scroll chat to bottom
+- [x] Enter key to send message
+
 ## 🔄 Prochaines Étapes
 
 ### Tests
@@ -47,9 +81,12 @@
 - [ ] Vérifier l'accessibilité (contraste, taille de police)
 - [ ] Tester avec plusieurs utilisatrices simultanément
 - [ ] Valider le matching en conditions réelles
+- [ ] Tester la messagerie en temps réel
 
 ### Améliorations futures
-- [ ] Système de messagerie entre utilisatrices
+- [ ] Historique des messages persistant
+- [ ] Notifications de nouveaux messages
+- [ ] Indicateur "en train d'écrire..."
 - [ ] Profils utilisateurs avec photo
 - [ ] Système de notation/avis
 - [ ] Notifications push
@@ -83,6 +120,7 @@
 - 💾 **Stockage en mémoire** : Les trajets sont perdus au redémarrage du serveur
 - 🔄 **Communication temps réel** : Socket.io gère les mises à jour instantanées
 - 📐 **Calculs géométriques** : Implémentation manuelle (haversine, point-to-line)
+- 💬 **Messagerie temps réel** : Chat direct via Socket.io entre utilisatrices
 
 ## 🎯 APIs utilisées
 
@@ -93,3 +131,7 @@
 
 ### APIs Navigateur
 1. **Geolocation API** : Obtention de la position actuelle de l'utilisateur
+
+### Socket.io Events
+1. **send_message** : Envoi de messages entre utilisatrices
+2. **receive_message** : Réception de messages en temps réel

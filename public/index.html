@@ -39,14 +39,9 @@
                 <div class="nearby-view">
                     <div class="nearby-map">
                         <div id="nearbyMap"></div>
-                    </div>
-                    <div class="nearby-list">
-                        <h3>👭 Femmes à proximité (<span id="nearbyCount">0</span>)</h3>
-                        <div id="nearbyUsersList">
-                            <div class="no-nearby">
-                                <p>🔍 Recherche en cours...</p>
-                                <p class="hint">Aucune utilisatrice à proximité pour le moment</p>
-                            </div>
+                        <div class="map-info">
+                            <span>👭 <span id="nearbyCount">0</span> femme(s) à proximité</span>
+                            <span class="map-hint">Cliquez sur un marqueur pour discuter</span>
                         </div>
                     </div>
                 </div>
@@ -153,6 +148,37 @@
 
             <!-- Notifications -->
             <div id="notifications" class="notifications"></div>
+            
+            <!-- Chat Modal -->
+            <div id="chatModal" class="chat-modal">
+                <div class="chat-container">
+                    <div class="chat-header">
+                        <div class="chat-user-info">
+                            <div class="chat-avatar">👤</div>
+                            <div class="chat-user-name" id="chatUserName">Utilisatrice</div>
+                        </div>
+                        <button class="chat-close-btn" id="closeChatBtn">✕</button>
+                    </div>
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="chat-welcome">
+                            <p>💬 Commencez la conversation</p>
+                            <p class="hint">Soyez respectueuse et bienveillante</p>
+                        </div>
+                    </div>
+                    <div class="chat-input-container">
+                        <input 
+                            type="text" 
+                            id="chatInput" 
+                            class="chat-input" 
+                            placeholder="Écrivez votre message..."
+                            maxlength="500"
+                        />
+                        <button class="chat-send-btn" id="sendMessageBtn">
+                            <span>📤</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
         </main>
 
         <footer>
