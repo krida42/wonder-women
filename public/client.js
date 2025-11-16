@@ -21,60 +21,78 @@ let sosAlertActive = false;
 let sosUserId = null;
 let sosMarker = null;
 let currentMatches = [];
+let emergencyContacts = [];
 
-// Initialisation de la carte Leaflet (trajet)
-function initMap() {
-    const mapElement = document.getElementById('map');
-    if (!mapElement) {
-        console.warn('Map element not found');
-        return;
-    }
-    
-    try {
-        map = L.map('map').setView([48.8566, 2.3522], 12);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
-            maxZoom: 19
-        }).addTo(map);
-    } catch (error) {
-        console.error('Error initializing map:', error);
-    }
-}
-
-// Initialisation de la carte de proximité
+// Initialisation de la carte Google Maps avec l'API native
 function initNearbyMap() {
     const nearbyMapElement = document.getElementById('nearbyMap');
     if (!nearbyMapElement) {
         console.warn('Nearby map element not found');
         return;
     }
-    
+
     try {
-        nearbyMap = L.map('nearbyMap').setView([48.8566, 2.3522], 13);
-        
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap',
-            maxZoom: 19
-        }).addTo(nearbyMap);
-        
-        console.log('✅ Carte de proximité initialisée');
+        // Vérifier que Google Maps est chargé
+        if (typeof google === 'undefined' || !google.maps) {
+            console.error('❌ Google Maps API non disponible');
+            return;
+        }
+
+        // Créer une nouvelle carte Google Maps native
+        nearbyMap = new google.maps.Map(nearbyMapElement, {
+            zoom: 13,
+            center: { lat: 48.8566, lng: 2.3522 },
+            mapTypeId: 'roadmap'
+        });
+
+        console.log('✅ Google Maps initialisée sur la carte de proximité');
     } catch (error) {
         console.error('Error initializing nearby map:', error);
+    }
+}
+
+// Initialisation de la carte principale (non utilisée pour le moment)
+function initMap() {
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.warn('Map element not found');
+        return;
+    }
+
+    try {
+        if (typeof google === 'undefined' || !google.maps) {
+            console.warn('Google Maps API non disponible');
+            return;
+        }
+
+        map = new google.maps.Map(mapElement, {
+            zoom: 12,
+            center: { lat: 48.8566, lng: 2.3522 },
+            mapTypeId: 'roadmap'
+        });
+
+        console.log('✅ Google Maps chargée sur la carte principale');
+    } catch (error) {
+        console.error('Error initializing map:', error);
     }
 }
 
 // Initialisation au chargement
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Initialisation de l\'application...');
-    
-    // Initialiser la carte
-    initNearbyMap();
-    
+
     setDefaultDepartureTime();
     setupEventListeners();
+
+    // Charger l'API Google Maps EN PREMIER
     await loadGoogleMapsAPI();
-    
+
+    // Initialiser la carte APRÈS avoir chargé Google Maps
+    initNearbyMap();
+
+    // Attendre un petit peu que la carte soit vraiment prête
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Géolocalisation automatique
     autoGetCurrentLocation();
     
@@ -84,7 +102,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         document.getElementById('userName').value = savedName;
         currentUserName = savedName;
     }
-    
+
+    // Charger les contacts de secours
+    loadEmergencyContacts();
+
     console.log('✅ Application initialisée');
 });
 
@@ -116,6 +137,7 @@ function setupEventListeners() {
     
     // Settings
     document.getElementById('saveUserNameBtn').addEventListener('click', saveUserName);
+    document.getElementById('addEmergencyContactBtn').addEventListener('click', openAddEmergencyContactModal);
     
     // SOS Modal
     document.getElementById('cancelSosBtn').addEventListener('click', closeSOSModal);
@@ -184,6 +206,79 @@ function saveUserName() {
         closeSettingsSheet();
     } else {
         showNotification('Veuillez entrer un pseudo', 'error');
+    }
+}
+
+// Charger les contacts de secours depuis localStorage
+function loadEmergencyContacts() {
+    const saved = localStorage.getItem('emergencyContacts');
+    if (saved) {
+        emergencyContacts = JSON.parse(saved);
+    }
+    displayEmergencyContacts();
+}
+
+// Afficher les contacts de secours
+function displayEmergencyContacts() {
+    const list = document.getElementById('emergencyContactsList');
+    list.innerHTML = '';
+
+    if (emergencyContacts.length === 0) {
+        list.innerHTML = '<p class="settings-hint">Aucun contact enregistré</p>';
+        return;
+    }
+
+    emergencyContacts.forEach((contact, index) => {
+        const contactDiv = document.createElement('div');
+        contactDiv.className = 'emergency-contact-item';
+        contactDiv.innerHTML = `
+            <div class="emergency-contact-info">
+                <div class="emergency-contact-name">👤 ${contact.name}</div>
+                <div class="emergency-contact-phone">📱 ${contact.phone}</div>
+            </div>
+            <button type="button" class="btn-delete" onclick="deleteEmergencyContact(${index})">
+                ✕
+            </button>
+        `;
+        list.appendChild(contactDiv);
+    });
+}
+
+// Ouvrir le modal pour ajouter un contact
+function openAddEmergencyContactModal() {
+    const name = prompt('Nom du contact:');
+    if (!name || !name.trim()) {
+        return;
+    }
+
+    const phone = prompt('Numéro de téléphone:');
+    if (!phone || !phone.trim()) {
+        return;
+    }
+
+    addEmergencyContact(name.trim(), phone.trim());
+}
+
+// Ajouter un contact de secours
+function addEmergencyContact(name, phone) {
+    emergencyContacts.push({
+        name: name,
+        phone: phone
+    });
+
+    // Sauvegarder dans localStorage
+    localStorage.setItem('emergencyContacts', JSON.stringify(emergencyContacts));
+    displayEmergencyContacts();
+    showNotification('Contact ajouté !', 'success');
+}
+
+// Supprimer un contact
+function deleteEmergencyContact(index) {
+    if (confirm('Êtes-vous sûre de vouloir supprimer ce contact ?')) {
+        emergencyContacts.splice(index, 1);
+        localStorage.setItem('emergencyContacts', JSON.stringify(emergencyContacts));
+        displayEmergencyContacts();
+        showNotification('Contact supprimé', 'success');
     }
 }
 
@@ -339,20 +434,35 @@ async function loadGoogleMapsAPI() {
         const response = await fetch('/api/config');
         const config = await response.json();
         googleMapsApiKey = config.googleMapsApiKey;
-        
+
         if (!googleMapsApiKey || googleMapsApiKey === 'YOUR_API_KEY_HERE') {
             console.warn('⚠️ Clé API non configurée - Utilisation de Nominatim');
             setupNominatimAutocomplete();
             return;
         }
-        
-        const script = document.createElement('script');
-        script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
-        script.async = true;
-        script.defer = true;
-        script.onload = initAutocomplete;
-        document.head.appendChild(script);
-        
+
+        // Créer une Promise qui se résout quand le script est chargé
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
+            script.async = true;
+
+            script.onload = () => {
+                console.log('✅ Google Maps API chargée');
+                window.googleMapsApiKey = googleMapsApiKey;
+                initAutocomplete();
+                resolve();
+            };
+
+            script.onerror = () => {
+                console.error('❌ Erreur chargement Google Maps');
+                setupNominatimAutocomplete();
+                resolve(); // On continue même en cas d'erreur
+            };
+
+            document.head.appendChild(script);
+        });
+
     } catch (error) {
         console.error('Erreur API:', error);
         setupNominatimAutocomplete();
@@ -480,69 +590,92 @@ function setDefaultDepartureTime() {
 // Géolocalisation automatique
 async function autoGetCurrentLocation() {
     const originInput = document.getElementById('origin');
-    
+
     if (!navigator.geolocation) {
+        console.warn('⚠️ Géolocalisation non supportée par le navigateur');
         originInput.placeholder = 'Entrez votre position de départ';
         return;
     }
-    
+
     originInput.placeholder = '📍 Détection en cours...';
-    
+
     try {
         const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
-                enableHighAccuracy: true,
-                timeout: 10000,
+                enableHighAccuracy: false, // Désactiver pour éviter les timeouts
+                timeout: 15000,
                 maximumAge: 0
             });
         });
-        
+
         const { latitude, longitude } = position.coords;
         currentUserPosition = { lat: latitude, lon: longitude };
-        
-        console.log(`📍 Position: ${latitude}, ${longitude}`);
-        
-        // Essayer le géocodage inverse
-        const address = await reverseGeocode(latitude, longitude);
-        
-        if (address) {
-            originInput.value = address;
-            originInput.placeholder = 'Position actuelle';
-        } else {
-            // Si le géocodage échoue, utiliser "Position actuelle" comme texte
+
+        console.log(`📍 Position détectée: ${latitude}, ${longitude}`);
+
+        // Afficher la position sur la carte EN PREMIER
+        displayUserLocationOnMap(latitude, longitude);
+
+        // Essayer le géocodage inverse en arrière-plan
+        try {
+            const address = await reverseGeocode(latitude, longitude);
+            if (address) {
+                originInput.value = address;
+                originInput.placeholder = 'Position actuelle';
+            } else {
+                originInput.value = 'Position actuelle';
+                originInput.placeholder = 'Position actuelle';
+            }
+        } catch (e) {
+            console.log('⚠️ Géocodage inverse échoué, utilisation de "Position actuelle"');
             originInput.value = 'Position actuelle';
             originInput.placeholder = 'Position actuelle';
         }
-        
-        // Centrer la carte de proximité
-        if (nearbyMap) {
-            nearbyMap.setView([latitude, longitude], 14);
-            
-            // Marqueur utilisateur
-            if (myMarker) {
-                nearbyMap.removeLayer(myMarker);
-            }
-            
-            const userIcon = L.divIcon({
-                className: 'user-marker',
-                html: '💜',
-                iconSize: [40, 40]
-            });
-            
-            myMarker = L.marker([latitude, longitude], { icon: userIcon })
-                .addTo(nearbyMap)
-                .bindPopup('<b>Vous êtes ici</b>');
-        }
-        
+
         // Envoyer au serveur
         socket.emit('update_position', { lat: latitude, lon: longitude });
-        
         showNotification('📍 Position détectée', 'success');
-        
+
     } catch (error) {
-        console.log('⚠️ Géolocalisation échouée');
+        console.warn('⚠️ Géolocalisation échouée:', error.message);
         originInput.placeholder = 'Entrez votre position de départ';
         originInput.value = '';
+        showNotification('Géolocalisation non disponible', 'info');
+    }
+}
+
+// Fonction helper pour afficher la position sur la carte
+function displayUserLocationOnMap(latitude, longitude) {
+    if (!nearbyMap) {
+        console.warn('⚠️ La carte n\'est pas encore prête');
+        return;
+    }
+
+    try {
+        nearbyMap.setCenter({ lat: latitude, lng: longitude });
+        nearbyMap.setZoom(14);
+
+        // Effacer l'ancien marqueur s'il existe
+        if (myMarker) {
+            myMarker.setMap(null);
+        }
+
+        // Créer un cercle rose (magenta) pour la position actuelle
+        myMarker = new google.maps.Circle({
+            center: { lat: latitude, lng: longitude },
+            radius: 30, // 30 mètres
+            map: nearbyMap,
+            fillColor: '#ff1493',
+            fillOpacity: 0.7,
+            strokeColor: '#ff1493',
+            strokeWeight: 2,
+            strokeOpacity: 0.9,
+            title: 'Vous êtes ici'
+        });
+
+        console.log('✅ Position affichée sur la carte');
+    } catch (error) {
+        console.error('❌ Erreur lors de l\'affichage de la position:', error);
     }
 }
 
@@ -570,19 +703,42 @@ async function useCurrentLocation() {
         
         const { latitude, longitude } = position.coords;
         currentUserPosition = { lat: latitude, lon: longitude };
-        
+
         const address = await reverseGeocode(latitude, longitude);
-        
+
         if (address) {
             originInput.value = address;
         } else {
             originInput.value = 'Position actuelle';
         }
-        
+
+        // Mettre à jour la position sur la carte
+        if (nearbyMap) {
+            nearbyMap.setCenter({ lat: latitude, lng: longitude });
+            nearbyMap.setZoom(14);
+
+            // Effacer l'ancien marqueur s'il existe
+            if (myMarker) {
+                myMarker.setMap(null);
+            }
+
+            myMarker = new google.maps.Circle({
+                center: { lat: latitude, lng: longitude },
+                radius: 30, // 30 mètres (plus petit)
+                map: nearbyMap,
+                fillColor: '#ff1493',
+                fillOpacity: 0.7,
+                strokeColor: '#ff1493',
+                strokeWeight: 2,
+                strokeOpacity: 0.9,
+                title: 'Vous êtes ici'
+            });
+        }
+
         socket.emit('update_position', { lat: latitude, lon: longitude });
-        
+
         showNotification('Position utilisée !', 'success');
-        
+
     } catch (error) {
         showNotification('Erreur de géolocalisation', 'error');
     } finally {
@@ -684,56 +840,78 @@ async function handleTripSubmit(e) {
     socket.emit('submit_trip', tripData);
 }
 
-// Afficher uniquement les matches sur la carte
+// Afficher uniquement les matches sur la carte avec cercles rouges et trajets
 function displayMatchesOnMap(matches) {
     const matchesMapCount = document.getElementById('matchesMapCount');
-    
+
     matchesMapCount.textContent = matches.length;
-    
-    // Effacer anciens marqueurs
-    userMarkers.forEach(marker => nearbyMap.removeLayer(marker));
+
+    // Effacer anciens marqueurs/cercles et polylines
+    userMarkers.forEach(marker => marker.setMap(null));
     userMarkers.clear();
-    
+
+    // Effacer les anciens polylines (stocker dans matchPolylines)
+    matchPolylines.forEach(line => line.setMap(null));
+    matchPolylines = [];
+
     if (matches.length === 0) {
         return;
     }
-    
+
     matches.forEach(match => {
-        // Marqueur sur la carte uniquement pour les matches
+        // Afficher la position de chaque match avec un cercle rouge
         if (match.trip && match.trip.polyline && match.trip.polyline.length > 0) {
+            // Afficher le trajet du match en ligne violet/bleu
+            const polyline = displayPolyline(match.trip.polyline, '#8b5cf6', 3, 0.7);
+            if (polyline) {
+                matchPolylines.push(polyline);
+            }
+
             const firstPoint = match.trip.polyline[0];
-            
-            const markerIcon = L.divIcon({
-                className: 'user-marker',
-                html: '👤',
-                iconSize: [35, 35]
+            const lat = firstPoint[0];
+            const lng = firstPoint[1];
+
+            // Créer un cercle rouge pour représenter la position du match
+            const circle = new google.maps.Circle({
+                center: { lat: lat, lng: lng },
+                radius: 30, // 30 mètres (même taille que l'utilisateur)
+                map: nearbyMap,
+                fillColor: '#ff0000',
+                fillOpacity: 0.7,
+                strokeColor: '#ff0000',
+                strokeWeight: 2,
+                strokeOpacity: 0.9,
+                title: `${match.userName} - ${match.similarity}%`,
+                cursor: 'pointer'
             });
-            
-            const marker = L.marker([firstPoint[0], firstPoint[1]], { icon: markerIcon })
-                .addTo(nearbyMap)
-                .bindPopup(`<b>${match.userName}</b><br>🎯 Match: ${match.similarity}%`);
-            
-            // Ajouter un événement de clic sur le marqueur
-            marker.on('click', () => {
+
+            // Ajouter un popup au clic
+            circle.addListener('click', () => {
                 openChat(match.userId, match.userName);
             });
-            
-            userMarkers.set(match.userId, marker);
+
+            userMarkers.set(match.userId, circle);
         }
     });
 }
 
-// Afficher polyline
+// Afficher polyline sur Google Maps
 function displayPolyline(polyline, color = '#667eea', weight = 4, opacity = 0.7) {
-    if (!polyline || polyline.length === 0) return null;
-    
-    const latLngs = polyline.map(point => [point[0], point[1]]);
-    const line = L.polyline(latLngs, {
-        color: color,
-        weight: weight,
-        opacity: opacity
-    }).addTo(map);
-    
+    if (!polyline || polyline.length === 0 || !nearbyMap) return null;
+
+    // Convertir les points du polyline en LatLng pour Google Maps
+    const path = polyline.map(point => ({ lat: point[0], lng: point[1] }));
+
+    // Créer une polyline Google Maps
+    const line = new google.maps.Polyline({
+        path: path,
+        geodesic: true,
+        strokeColor: color,
+        strokeOpacity: opacity,
+        strokeWeight: weight,
+        map: nearbyMap
+    });
+
     return line;
 }
 
