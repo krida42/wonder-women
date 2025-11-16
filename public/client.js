@@ -3,48 +3,152 @@ const socket = io();
 
 // Variables globales
 let map;
+let nearbyMap;
 let userPolyline;
 let matchPolylines = [];
 let currentTrip = null;
 let originAutocomplete;
 let destinationAutocomplete;
 let googleMapsApiKey = '';
+let userMarkers = new Map();
+let currentUserPosition = null;
+let myMarker = null;
 
-// Initialisation de la carte Leaflet
+// Initialisation de la carte Leaflet (trajet)
 function initMap() {
-    map = L.map('map').setView([48.8566, 2.3522], 12); // Paris par défaut
+    const mapElement = document.getElementById('map');
+    if (!mapElement) {
+        console.warn('Map element not found');
+        return;
+    }
     
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '© OpenStreetMap contributors',
-        maxZoom: 19
-    }).addTo(map);
+    try {
+        map = L.map('map').setView([48.8566, 2.3522], 12);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(map);
+    } catch (error) {
+        console.error('Error initializing map:', error);
+    }
 }
 
-// Initialisation au chargement de la page
+// Initialisation de la carte de proximité
+function initNearbyMap() {
+    const nearbyMapElement = document.getElementById('nearbyMap');
+    if (!nearbyMapElement) {
+        console.warn('Nearby map element not found');
+        return;
+    }
+    
+    try {
+        nearbyMap = L.map('nearbyMap').setView([48.8566, 2.3522], 13);
+        
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap',
+            maxZoom: 19
+        }).addTo(nearbyMap);
+        
+        console.log('✅ Carte de proximité initialisée');
+    } catch (error) {
+        console.error('Error initializing nearby map:', error);
+    }
+}
+
+// Initialisation au chargement
 document.addEventListener('DOMContentLoaded', async () => {
-    initMap();
+    console.log('🚀 Initialisation de l\'application...');
+    
+    // Initialiser les cartes
+    initNearbyMap();
+    // initMap(); // Carte de trajet initialisée plus tard si nécessaire
+    
     setDefaultDepartureTime();
     setupEventListeners();
     await loadGoogleMapsAPI();
     
-    // Déclencher automatiquement la géolocalisation au chargement
+    // Géolocalisation automatique
     autoGetCurrentLocation();
+    
+    console.log('✅ Application initialisée');
 });
 
-// Charger l'API Google Maps et initialiser l'autocomplétion
+// Configuration des événements
+function setupEventListeners() {
+    // Tabs navigation
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            switchTab(btn.dataset.tab);
+        });
+    });
+    
+    // Formulaire
+    document.getElementById('tripForm').addEventListener('submit', handleTripSubmit);
+    
+    // Boutons
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        socket.emit('refresh_matches');
+        showNotification('Actualisation...', 'info');
+    });
+    
+    document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
+}
+
+// Changer de tab
+function switchTab(tabName) {
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+        if (btn.dataset.tab === tabName) {
+            btn.classList.add('active');
+        }
+    });
+    
+    document.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    const activeTab = document.getElementById(`${tabName}Tab`);
+    if (activeTab) {
+        activeTab.classList.add('active');
+        
+        if (tabName === 'nearby' && nearbyMap) {
+            setTimeout(() => {
+                nearbyMap.invalidateSize();
+                requestNearbyUsers();
+            }, 100);
+        } else if (tabName === 'trip') {
+            // Initialiser la carte de trajet si elle n'existe pas encore
+            if (!map) {
+                setTimeout(() => {
+                    initMap();
+                }, 100);
+            } else {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 100);
+            }
+        }
+    }
+}
+
+// Demander les utilisateurs à proximité
+function requestNearbyUsers() {
+    socket.emit('get_nearby_users');
+}
+
+// Charger Google Maps API
 async function loadGoogleMapsAPI() {
     try {
-        // Récupérer la clé API depuis le serveur
         const response = await fetch('/api/config');
         const config = await response.json();
         googleMapsApiKey = config.googleMapsApiKey;
         
         if (!googleMapsApiKey || googleMapsApiKey === 'YOUR_API_KEY_HERE') {
-            console.warn('⚠️ Clé API Google Maps non configurée. Autocomplétion désactivée.');
+            console.warn('⚠️ Clé API non configurée');
             return;
         }
         
-        // Charger le script Google Maps
         const script = document.createElement('script');
         script.src = `https://maps.googleapis.com/maps/api/js?key=${googleMapsApiKey}&libraries=places`;
         script.async = true;
@@ -53,33 +157,27 @@ async function loadGoogleMapsAPI() {
         document.head.appendChild(script);
         
     } catch (error) {
-        console.error('Erreur lors du chargement de l\'API Google Maps:', error);
+        console.error('Erreur API:', error);
     }
 }
 
-// Initialiser l'autocomplétion pour les champs d'adresse
+// Autocomplétion
 function initAutocomplete() {
     if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
-        console.warn('Google Maps Places API non disponible');
         return;
     }
     
     const originInput = document.getElementById('origin');
     const destinationInput = document.getElementById('destination');
     
-    // Options pour l'autocomplétion
-    const autocompleteOptions = {
+    const options = {
         types: ['geocode', 'establishment'],
         fields: ['formatted_address', 'geometry', 'name']
     };
     
-    // Initialiser l'autocomplétion pour l'origine
-    originAutocomplete = new google.maps.places.Autocomplete(originInput, autocompleteOptions);
+    originAutocomplete = new google.maps.places.Autocomplete(originInput, options);
+    destinationAutocomplete = new google.maps.places.Autocomplete(destinationInput, options);
     
-    // Initialiser l'autocomplétion pour la destination
-    destinationAutocomplete = new google.maps.places.Autocomplete(destinationInput, autocompleteOptions);
-    
-    // Événement quand une adresse est sélectionnée
     originAutocomplete.addListener('place_changed', () => {
         const place = originAutocomplete.getPlace();
         if (place.formatted_address) {
@@ -94,47 +192,27 @@ function initAutocomplete() {
         }
     });
     
-    console.log('✅ Autocomplétion Google Places activée');
-    showNotification('Autocomplétion d\'adresses activée', 'success');
+    console.log('✅ Autocomplétion activée');
 }
 
-// Configuration de l'heure de départ par défaut (maintenant)
+// Heure par défaut
 function setDefaultDepartureTime() {
     const now = new Date();
     now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
     document.getElementById('departureTime').value = now.toISOString().slice(0, 16);
 }
 
-// Configuration des écouteurs d'événements
-function setupEventListeners() {
-    // Soumission du formulaire
-    document.getElementById('tripForm').addEventListener('submit', handleTripSubmit);
-    
-    // Bouton de rafraîchissement
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        socket.emit('refresh_matches');
-        showNotification('Actualisation des matches...', 'info');
-    });
-    
-    // Bouton de géolocalisation
-    document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
-}
-
-// Géolocalisation automatique au chargement de la page
+// Géolocalisation automatique
 async function autoGetCurrentLocation() {
     const originInput = document.getElementById('origin');
     
-    // Vérifier si la géolocalisation est supportée
     if (!navigator.geolocation) {
-        console.log('⚠️ Géolocalisation non supportée par ce navigateur');
         return;
     }
     
-    // Afficher un indicateur de chargement dans le champ
-    originInput.placeholder = '📍 Détection de votre position...';
+    originInput.placeholder = '📍 Détection...';
     
     try {
-        // Obtenir la position
         const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
                 enableHighAccuracy: true,
@@ -144,43 +222,57 @@ async function autoGetCurrentLocation() {
         });
         
         const { latitude, longitude } = position.coords;
-        console.log(`📍 Position automatique obtenue: ${latitude}, ${longitude}`);
+        currentUserPosition = { lat: latitude, lon: longitude };
         
-        // Géocoder inversement pour obtenir l'adresse
+        console.log(`📍 Position: ${latitude}, ${longitude}`);
+        
         await reverseGeocode(latitude, longitude, originInput);
         
-        showNotification('📍 Votre position actuelle a été détectée automatiquement', 'success');
+        // Centrer la carte de proximité
+        if (nearbyMap) {
+            nearbyMap.setView([latitude, longitude], 14);
+            
+            // Marqueur utilisateur
+            if (myMarker) {
+                nearbyMap.removeLayer(myMarker);
+            }
+            
+            const userIcon = L.divIcon({
+                className: 'user-marker',
+                html: '💜',
+                iconSize: [40, 40]
+            });
+            
+            myMarker = L.marker([latitude, longitude], { icon: userIcon })
+                .addTo(nearbyMap)
+                .bindPopup('<b>Vous êtes ici</b>');
+        }
+        
+        // Envoyer au serveur
+        socket.emit('update_position', { lat: latitude, lon: longitude });
+        
+        showNotification('📍 Position détectée', 'success');
         
     } catch (error) {
-        console.log('⚠️ Géolocalisation automatique échouée:', error.message);
-        
-        // Restaurer le placeholder par défaut
+        console.log('⚠️ Géolocalisation échouée');
         originInput.placeholder = 'Ex: Tour Eiffel, Paris';
-        
-        // Ne pas afficher de notification d'erreur pour ne pas déranger l'utilisateur
-        // L'utilisateur peut toujours utiliser le bouton manuel ou taper une adresse
-        
     }
 }
 
-// Utiliser la position actuelle de l'utilisateur (bouton manuel)
+// Bouton géolocalisation
 async function useCurrentLocation() {
     const locationBtn = document.getElementById('useLocationBtn');
     const originInput = document.getElementById('origin');
     
-    // Vérifier si la géolocalisation est supportée
     if (!navigator.geolocation) {
-        showNotification('La géolocalisation n\'est pas supportée par votre navigateur', 'error');
+        showNotification('Géolocalisation non supportée', 'error');
         return;
     }
     
-    // Désactiver le bouton et afficher le chargement
     locationBtn.disabled = true;
-    locationBtn.classList.add('loading');
     locationBtn.textContent = '⏳';
     
     try {
-        // Obtenir la position
         const position = await new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
                 enableHighAccuracy: true,
@@ -190,44 +282,25 @@ async function useCurrentLocation() {
         });
         
         const { latitude, longitude } = position.coords;
-        console.log(`📍 Position obtenue: ${latitude}, ${longitude}`);
+        currentUserPosition = { lat: latitude, lon: longitude };
         
-        // Géocoder inversement pour obtenir l'adresse
         await reverseGeocode(latitude, longitude, originInput);
         
-        showNotification('Position actuelle utilisée !', 'success');
+        socket.emit('update_position', { lat: latitude, lon: longitude });
+        
+        showNotification('Position utilisée !', 'success');
         
     } catch (error) {
-        console.error('Erreur de géolocalisation:', error);
-        
-        let errorMessage = 'Impossible d\'obtenir votre position';
-        
-        switch(error.code) {
-            case error.PERMISSION_DENIED:
-                errorMessage = 'Permission de géolocalisation refusée. Veuillez autoriser l\'accès à votre position.';
-                break;
-            case error.POSITION_UNAVAILABLE:
-                errorMessage = 'Position non disponible. Vérifiez vos paramètres de localisation.';
-                break;
-            case error.TIMEOUT:
-                errorMessage = 'Délai d\'attente dépassé pour obtenir votre position.';
-                break;
-        }
-        
-        showNotification(errorMessage, 'error');
-        
+        showNotification('Erreur de géolocalisation', 'error');
     } finally {
-        // Réactiver le bouton
         locationBtn.disabled = false;
-        locationBtn.classList.remove('loading');
         locationBtn.textContent = '📍';
     }
 }
 
-// Géocodage inverse (coordonnées → adresse)
+// Géocodage inverse
 async function reverseGeocode(lat, lon, inputElement) {
     try {
-        // Si Google Maps est chargé, utiliser l'API Geocoding
         if (typeof google !== 'undefined' && google.maps && google.maps.Geocoder) {
             const geocoder = new google.maps.Geocoder();
             const latlng = { lat: lat, lng: lon };
@@ -237,43 +310,35 @@ async function reverseGeocode(lat, lon, inputElement) {
                     if (status === 'OK' && results[0]) {
                         resolve(results[0]);
                     } else {
-                        reject(new Error('Geocoding failed: ' + status));
+                        reject(new Error('Geocoding failed'));
                     }
                 });
             });
             
             inputElement.value = result.formatted_address;
-            console.log(`📍 Adresse trouvée: ${result.formatted_address}`);
-            
         } else {
-            // Fallback: utiliser les coordonnées directement
             inputElement.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
-            console.log('⚠️ Google Maps non chargé, utilisation des coordonnées');
         }
-        
     } catch (error) {
-        console.error('Erreur de géocodage inverse:', error);
-        // En cas d'erreur, utiliser les coordonnées
         inputElement.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
     }
 }
 
-// Gestion de la soumission du trajet
+// Soumission trajet
 async function handleTripSubmit(e) {
     e.preventDefault();
     
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = true;
-    submitBtn.innerHTML = '⏳ Calcul en cours...<span class="spinner"></span>';
+    submitBtn.innerHTML = '⏳ Calcul...<span class="spinner"></span>';
     
     const originAddress = document.getElementById('origin').value.trim();
     const destinationAddress = document.getElementById('destination').value.trim();
     
-    // Validation
     if (!originAddress || !destinationAddress) {
-        showNotification('Veuillez remplir les adresses d\'origine et de destination', 'error');
+        showNotification('Remplissez les adresses', 'error');
         submitBtn.disabled = false;
-        submitBtn.innerHTML = '🔍 Trouver des matches';
+        submitBtn.innerHTML = '💜 Trouver des compagnes';
         return;
     }
     
@@ -285,27 +350,69 @@ async function handleTripSubmit(e) {
         departureTime: document.getElementById('departureTime').value
     };
     
-    // Envoi au serveur
     socket.emit('submit_trip', tripData);
 }
 
-// Exemples de trajets
-function fillExample1() {
-    document.getElementById('origin').value = 'Tour Eiffel, Paris';
-    document.getElementById('destination').value = 'Musée du Louvre, Paris';
+// Afficher utilisateurs à proximité
+function displayNearbyUsers(users) {
+    const nearbyList = document.getElementById('nearbyUsersList');
+    const nearbyCount = document.getElementById('nearbyCount');
+    
+    nearbyCount.textContent = users.length;
+    
+    // Effacer anciens marqueurs
+    userMarkers.forEach(marker => nearbyMap.removeLayer(marker));
+    userMarkers.clear();
+    
+    if (users.length === 0) {
+        nearbyList.innerHTML = `
+            <div class="no-nearby">
+                <p>🔍 Aucune utilisatrice à proximité</p>
+                <p class="hint">Soyez la première connectée !</p>
+            </div>
+        `;
+        return;
+    }
+    
+    nearbyList.innerHTML = '';
+    
+    users.forEach(user => {
+        // Liste
+        const userDiv = document.createElement('div');
+        userDiv.className = 'nearby-user';
+        
+        const distance = user.distance ? `${(user.distance / 1000).toFixed(1)} km` : '?';
+        const hasTrip = user.hasTrip ? '🚶‍♀️ En trajet' : '📍 En ligne';
+        
+        userDiv.innerHTML = `
+            <div class="nearby-user-avatar">👤</div>
+            <div class="nearby-user-info">
+                <div class="nearby-user-name">${user.userName}</div>
+                <div class="nearby-user-status">${hasTrip}</div>
+            </div>
+            <div class="nearby-user-distance">${distance}</div>
+        `;
+        
+        nearbyList.appendChild(userDiv);
+        
+        // Marqueur sur la carte
+        if (user.position) {
+            const markerIcon = L.divIcon({
+                className: 'user-marker',
+                html: '👤',
+                iconSize: [35, 35]
+            });
+            
+            const marker = L.marker([user.position.lat, user.position.lon], { icon: markerIcon })
+                .addTo(nearbyMap)
+                .bindPopup(`<b>${user.userName}</b><br>${hasTrip}<br>${distance}`);
+            
+            userMarkers.set(user.userId, marker);
+        }
+    });
 }
 
-function fillExample2() {
-    document.getElementById('origin').value = 'Gare du Nord, Paris';
-    document.getElementById('destination').value = 'Gare Montparnasse, Paris';
-}
-
-function fillExample3() {
-    document.getElementById('origin').value = 'Place de la République, Paris';
-    document.getElementById('destination').value = 'Place de la Bastille, Paris';
-}
-
-// Affichage d'une polyline sur la carte
+// Afficher polyline
 function displayPolyline(polyline, color = '#667eea', weight = 4, opacity = 0.7) {
     if (!polyline || polyline.length === 0) return null;
     
@@ -319,7 +426,7 @@ function displayPolyline(polyline, color = '#667eea', weight = 4, opacity = 0.7)
     return line;
 }
 
-// Affichage des marqueurs origine/destination
+// Afficher marqueurs
 function displayMarkers(origin, destination, color = '#667eea') {
     const originIcon = L.divIcon({
         className: 'custom-marker',
@@ -337,7 +444,7 @@ function displayMarkers(origin, destination, color = '#667eea') {
     L.marker([destination.lat, destination.lon], { icon: destIcon }).addTo(map);
 }
 
-// Centrer la carte sur une polyline
+// Centrer carte
 function fitMapToPolyline(polyline) {
     if (!polyline || polyline.length === 0) return;
     
@@ -345,27 +452,26 @@ function fitMapToPolyline(polyline) {
     map.fitBounds(bounds, { padding: [50, 50] });
 }
 
-// Affichage des matches
+// Afficher matches
 function displayMatches(matches) {
     const matchesList = document.getElementById('matchesList');
     const matchesCount = document.getElementById('matchesCount');
     const refreshBtn = document.getElementById('refreshBtn');
     
-    matchesCount.textContent = `${matches.length} match${matches.length > 1 ? 'es' : ''} trouvé${matches.length > 1 ? 's' : ''}`;
+    matchesCount.textContent = `${matches.length} personne${matches.length > 1 ? 's' : ''}`;
     
     if (matches.length > 0) {
         refreshBtn.style.display = 'block';
     }
     
-    // Effacer les polylines des matches précédents
     matchPolylines.forEach(line => map.removeLayer(line));
     matchPolylines = [];
     
     if (matches.length === 0) {
         matchesList.innerHTML = `
             <div class="no-matches">
-                <p>Aucun match pour le moment.</p>
-                <p class="hint">Attendez que d'autres utilisateurs se connectent ou ajustez votre trajet.</p>
+                <p>🔍 Recherche en cours...</p>
+                <p class="hint">D'autres personnes vont bientôt se connecter</p>
             </div>
         `;
         return;
@@ -373,7 +479,7 @@ function displayMatches(matches) {
     
     matchesList.innerHTML = '';
     
-    matches.forEach((match, index) => {
+    matches.forEach(match => {
         const card = document.createElement('div');
         card.className = 'match-card';
         
@@ -386,7 +492,7 @@ function displayMatches(matches) {
             </div>
             <div class="match-details">
                 <div class="match-detail">
-                    <strong>📏 Distance moy.</strong>
+                    <strong>📏 Distance</strong>
                     ${(match.details.avgDistance / 1000).toFixed(2)} km
                 </div>
                 <div class="match-detail">
@@ -394,18 +500,15 @@ function displayMatches(matches) {
                     ${match.details.overlapPercentage}%
                 </div>
                 <div class="match-detail">
-                    <strong>🎯 Score spatial</strong>
+                    <strong>🎯 Spatial</strong>
                     ${match.details.spatialScore}%
                 </div>
                 <div class="match-detail">
-                    <strong>⏰ Score temporel</strong>
+                    <strong>⏰ Temporel</strong>
                     ${match.details.temporalScore}%
                 </div>
             </div>
             <div class="match-trip-info">
-                <strong>Trajet :</strong> ${match.trip.origin.lat.toFixed(4)}, ${match.trip.origin.lon.toFixed(4)} 
-                → ${match.trip.destination.lat.toFixed(4)}, ${match.trip.destination.lon.toFixed(4)}
-                <br>
                 <strong>Mode :</strong> ${getModeName(match.trip.mode)} | 
                 <strong>Départ :</strong> ${formatDateTime(match.trip.departureTime)}
             </div>
@@ -415,7 +518,7 @@ function displayMatches(matches) {
     });
 }
 
-// Couleur selon le score
+// Couleur score
 function getScoreColor(score) {
     if (score >= 80) return '#4ade80';
     if (score >= 60) return '#fbbf24';
@@ -423,10 +526,10 @@ function getScoreColor(score) {
     return '#ef4444';
 }
 
-// Nom du mode de transport
+// Nom mode
 function getModeName(mode) {
     const modes = {
-        'transit': '🚇 Transit + Marche',
+        'transit': '🚇 Métro/Bus',
         'driving': '🚗 Voiture',
         'walking': '🚶 Marche',
         'bicycling': '🚴 Vélo'
@@ -434,7 +537,7 @@ function getModeName(mode) {
     return modes[mode] || mode;
 }
 
-// Formatage de la date/heure
+// Format date
 function formatDateTime(dateString) {
     const date = new Date(dateString);
     return date.toLocaleString('fr-FR', {
@@ -445,7 +548,7 @@ function formatDateTime(dateString) {
     });
 }
 
-// Affichage des notifications
+// Notifications
 function showNotification(message, type = 'info') {
     const notifications = document.getElementById('notifications');
     const notification = document.createElement('div');
@@ -455,38 +558,32 @@ function showNotification(message, type = 'info') {
     notifications.appendChild(notification);
     
     setTimeout(() => {
-        notification.style.animation = 'slideIn 0.3s ease-out reverse';
+        notification.style.animation = 'slideDown 0.3s ease-out reverse';
         setTimeout(() => notification.remove(), 300);
     }, 4000);
 }
 
-// ===== ÉVÉNEMENTS SOCKET.IO =====
+// ===== SOCKET.IO =====
 
-// Connexion établie
 socket.on('connect', () => {
-    console.log('✅ Connecté au serveur');
-    const statusIndicator = document.getElementById('connectionStatus');
-    statusIndicator.innerHTML = '<span class="dot"></span> Connecté';
-    statusIndicator.classList.add('connected');
-    showNotification('Connecté au serveur', 'success');
+    console.log('✅ Connecté');
+    showNotification('Connecté', 'success');
 });
 
-// Déconnexion
 socket.on('disconnect', () => {
-    console.log('❌ Déconnecté du serveur');
-    const statusIndicator = document.getElementById('connectionStatus');
-    statusIndicator.innerHTML = '<span class="dot"></span> Déconnecté';
-    statusIndicator.classList.remove('connected');
-    statusIndicator.classList.add('disconnected');
-    showNotification('Déconnecté du serveur', 'error');
+    console.log('❌ Déconnecté');
+    showNotification('Déconnecté', 'error');
 });
 
-// Mise à jour du nombre d'utilisateurs
 socket.on('users_count', (count) => {
     document.getElementById('usersCount').textContent = count;
 });
 
-// Confirmation du trajet
+socket.on('nearby_users', (data) => {
+    console.log('👭 Utilisateurs à proximité:', data.users);
+    displayNearbyUsers(data.users);
+});
+
 socket.on('trip_confirmed', (data) => {
     console.log('✅ Trajet confirmé', data);
     
@@ -494,29 +591,26 @@ socket.on('trip_confirmed', (data) => {
     
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = false;
-    submitBtn.innerHTML = '🔍 Trouver des matches';
+    submitBtn.innerHTML = '💜 Trouver des compagnes';
     
-    // Afficher les informations du trajet
     const tripInfoSection = document.getElementById('tripInfoSection');
     const tripInfo = document.getElementById('tripInfo');
     
     tripInfo.innerHTML = `
         <p><strong>Distance :</strong> ${(data.trip.distance / 1000).toFixed(2)} km</p>
-        <p><strong>Durée estimée :</strong> ${Math.round(data.trip.duration / 60)} minutes</p>
-        <p><strong>Points de trajet :</strong> ${data.trip.polyline.length}</p>
-        ${data.trip.isMock ? '<p style="color: #fb923c;"><strong>⚠️ Trajet simulé</strong> (API non configurée)</p>' : ''}
+        <p><strong>Durée :</strong> ${Math.round(data.trip.duration / 60)} min</p>
+        <p><strong>Points :</strong> ${data.trip.polyline.length}</p>
+        ${data.trip.isMock ? '<p style="color: #fb923c;"><strong>⚠️ Simulé</strong></p>' : ''}
     `;
     
     tripInfoSection.style.display = 'block';
     
-    // Afficher la polyline sur la carte
     if (userPolyline) {
         map.removeLayer(userPolyline);
     }
     
-    userPolyline = displayPolyline(data.trip.polyline, '#667eea', 5, 0.8);
+    userPolyline = displayPolyline(data.trip.polyline, '#ff6b9d', 5, 0.8);
     
-    // Afficher les marqueurs
     const origin = {
         lat: data.trip.polyline[0][0],
         lon: data.trip.polyline[0][1]
@@ -525,42 +619,39 @@ socket.on('trip_confirmed', (data) => {
         lat: data.trip.polyline[data.trip.polyline.length - 1][0],
         lon: data.trip.polyline[data.trip.polyline.length - 1][1]
     };
-    displayMarkers(origin, destination, '#667eea');
+    displayMarkers(origin, destination, '#ff6b9d');
     
-    // Centrer la carte
     fitMapToPolyline(data.trip.polyline);
     
-    showNotification('Trajet enregistré avec succès !', 'success');
+    showNotification('Trajet enregistré !', 'success');
 });
 
-// Mise à jour des matches
 socket.on('matches_update', (data) => {
-    console.log('🎯 Matches mis à jour', data.matches);
+    console.log('🎯 Matches:', data.matches);
     displayMatches(data.matches);
     
     if (data.matches.length > 0) {
-        showNotification(`${data.matches.length} match${data.matches.length > 1 ? 'es' : ''} trouvé${data.matches.length > 1 ? 's' : ''} !`, 'success');
+        showNotification(`${data.matches.length} match${data.matches.length > 1 ? 'es' : ''} !`, 'success');
     }
 });
 
-// Nouvel utilisateur rejoint
 socket.on('new_user_joined', (data) => {
-    console.log('👋 Nouvel utilisateur:', data.userName);
+    console.log('👋 Nouveau:', data.userName);
     showNotification(`${data.userName} a rejoint !`, 'info');
+    requestNearbyUsers();
 });
 
-// Utilisateur parti
 socket.on('user_left', (data) => {
-    console.log('👋 Utilisateur parti:', data.userName);
+    console.log('👋 Parti:', data.userName);
     showNotification(`${data.userName} est parti`, 'info');
+    requestNearbyUsers();
 });
 
-// Erreur
 socket.on('error', (data) => {
     console.error('❌ Erreur:', data.message);
     showNotification(`Erreur: ${data.message}`, 'error');
     
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = false;
-    submitBtn.innerHTML = '🔍 Trouver des matches';
+    submitBtn.innerHTML = '💜 Trouver des compagnes';
 });

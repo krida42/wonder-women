@@ -13,128 +13,143 @@
 <body>
     <div class="container">
         <header>
-            <h1>💜 Wonder Women</h1>
-            <p class="subtitle">Rentrez en sécurité, ensemble</p>
-            <div class="status-bar">
-                <span class="status-indicator" id="connectionStatus">
-                    <span class="dot"></span>
-                    <span>Connexion...</span>
-                </span>
+            <div class="header-top">
+                <h1>💜 Wonder Women</h1>
                 <span class="users-count">
                     <span>👭</span>
-                    <span><span id="usersCount">0</span> en ligne</span>
+                    <span id="usersCount">0</span>
                 </span>
+            </div>
+            <p class="subtitle">Rentrez en sécurité, ensemble</p>
+            
+            <!-- Tab Navigation -->
+            <div class="tab-navigation">
+                <button class="tab-btn active" data-tab="nearby">
+                    🗺️ À proximité
+                </button>
+                <button class="tab-btn" data-tab="trip">
+                    🚶‍♀️ Mon trajet
+                </button>
             </div>
         </header>
 
         <main>
-            <!-- Safety Banner -->
-            <div class="safety-banner">
-                <h3>🛡️ Votre sécurité avant tout</h3>
-                <p>Trouvez des personnes qui rentrent dans votre direction</p>
+            <!-- Nearby View -->
+            <div class="tab-content active" id="nearbyTab">
+                <div class="nearby-view">
+                    <div class="nearby-map">
+                        <div id="nearbyMap"></div>
+                    </div>
+                    <div class="nearby-list">
+                        <h3>👭 Femmes à proximité (<span id="nearbyCount">0</span>)</h3>
+                        <div id="nearbyUsersList">
+                            <div class="no-nearby">
+                                <p>🔍 Recherche en cours...</p>
+                                <p class="hint">Aucune utilisatrice à proximité pour le moment</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
-            <!-- Formulaire de trajet -->
-            <section class="trip-form-section">
-                <form id="tripForm">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="userName">💁‍♀️ Prénom (optionnel)</label>
-                            <input type="text" id="userName" placeholder="Ex: Sarah">
-                        </div>
-                    </div>
+            <!-- Trip View -->
+            <div class="tab-content" id="tripTab">
+                <!-- Safety Banner -->
+                <div class="safety-banner">
+                    <h3>🛡️ Votre sécurité avant tout</h3>
+                    <p>Trouvez des personnes qui rentrent dans votre direction</p>
+                </div>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="origin">📍 D'où partez-vous ?</label>
-                            <div class="input-with-button">
-                                <input type="text" id="origin" placeholder="Votre position..." required>
-                                <button type="button" class="btn-location" id="useLocationBtn" title="Ma position">
-                                    📍
-                                </button>
+                <!-- Formulaire de trajet -->
+                <section class="trip-form-section">
+                    <form id="tripForm">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="userName">💁‍♀️ Prénom (optionnel)</label>
+                                <input type="text" id="userName" placeholder="Ex: Sarah">
                             </div>
-                            <small class="hint-text">Position détectée automatiquement</small>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="origin">📍 D'où partez-vous ?</label>
+                                <div class="input-with-button">
+                                    <input type="text" id="origin" placeholder="Votre position..." required>
+                                    <button type="button" class="btn-location" id="useLocationBtn" title="Ma position">
+                                        📍
+                                    </button>
+                                </div>
+                                <small class="hint-text">Position détectée automatiquement</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="destination">🏠 Où allez-vous ?</label>
+                                <input type="text" id="destination" placeholder="Votre destination" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="mode">🚶‍♀️ Comment ?</label>
+                                <select id="mode">
+                                    <option value="transit">🚇 Métro / Bus</option>
+                                    <option value="walking">🚶‍♀️ À pied</option>
+                                    <option value="bicycling">🚴‍♀️ Vélo</option>
+                                    <option value="driving">🚗 Voiture / Taxi</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="departureTime">🕐 Quand ?</label>
+                                <input type="datetime-local" id="departureTime" required>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn-primary" id="submitBtn">
+                            💜 Trouver des compagnes
+                        </button>
+                    </form>
+                </section>
+
+                <!-- Informations du trajet -->
+                <section class="trip-info-section" id="tripInfoSection" style="display: none;">
+                    <h2>✅ Votre trajet</h2>
+                    <div class="trip-info" id="tripInfo"></div>
+                </section>
+
+                <!-- Liste des matches -->
+                <section class="matches-section">
+                    <h2>👭 Compagnes de route</h2>
+                    <div class="matches-header">
+                        <span id="matchesCount">0 personne</span>
+                        <button class="btn-refresh" id="refreshBtn" style="display: none;">
+                            🔄
+                        </button>
+                    </div>
+                    <div id="matchesList" class="matches-list">
+                        <div class="no-matches">
+                            <p>🔍 Recherche en cours...</p>
+                            <p class="hint">D'autres personnes vont bientôt se connecter</p>
                         </div>
                     </div>
+                </section>
 
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="destination">🏠 Où allez-vous ?</label>
-                            <input type="text" id="destination" placeholder="Votre destination" required>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="mode">🚶‍♀️ Comment ?</label>
-                            <select id="mode">
-                                <option value="transit">🚇 Métro / Bus</option>
-                                <option value="walking">🚶‍♀️ À pied</option>
-                                <option value="bicycling">🚴‍♀️ Vélo</option>
-                                <option value="driving">🚗 Voiture / Taxi</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="departureTime">🕐 Quand ?</label>
-                            <input type="datetime-local" id="departureTime" required>
-                        </div>
-                    </div>
-
-                    <button type="submit" class="btn-primary" id="submitBtn">
-                        💜 Trouver des compagnes
-                    </button>
-                </form>
-
-                <!-- Exemples cachés -->
-                <div class="examples" style="display: none;">
-                    <button class="btn-example" onclick="fillExample1()">Tour Eiffel → Louvre</button>
-                    <button class="btn-example" onclick="fillExample2()">Gare du Nord → Montparnasse</button>
-                    <button class="btn-example" onclick="fillExample3()">République → Bastille</button>
-                </div>
-            </section>
-
-            <!-- Informations du trajet -->
-            <section class="trip-info-section" id="tripInfoSection" style="display: none;">
-                <h2>✅ Votre trajet</h2>
-                <div class="trip-info" id="tripInfo"></div>
-            </section>
-
-            <!-- Carte cachée sur mobile -->
-            <section class="map-section" style="display: none;">
-                <div id="map"></div>
-            </section>
-
-            <!-- Liste des matches -->
-            <section class="matches-section">
-                <h2>👭 Compagnes de route</h2>
-                <div class="matches-header">
-                    <span id="matchesCount">0 personne</span>
-                    <button class="btn-refresh" id="refreshBtn" style="display: none;">
-                        🔄
-                    </button>
-                </div>
-                <div id="matchesList" class="matches-list">
-                    <div class="no-matches">
-                        <p>🔍 Recherche en cours...</p>
-                        <p class="hint">D'autres personnes vont bientôt se connecter</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- Safety Tips -->
-            <section class="safety-tips">
-                <h4>🛡️ Conseils de sécurité</h4>
-                <ul>
-                    <li>Restez en groupe dans les lieux publics</li>
-                    <li>Partagez votre position avec un proche</li>
-                    <li>Gardez votre téléphone chargé</li>
-                    <li>Faites confiance à votre instinct</li>
-                    <li>Urgence : 17 (Police) ou 112</li>
-                </ul>
-            </section>
+                <!-- Safety Tips -->
+                <section class="safety-tips">
+                    <h4>🛡️ Conseils de sécurité</h4>
+                    <ul>
+                        <li>Restez en groupe dans les lieux publics</li>
+                        <li>Partagez votre position avec un proche</li>
+                        <li>Gardez votre téléphone chargé</li>
+                        <li>Faites confiance à votre instinct</li>
+                        <li>Urgence : 17 (Police) ou 112</li>
+                    </ul>
+                </section>
+            </div>
 
             <!-- Notifications -->
             <div id="notifications" class="notifications"></div>

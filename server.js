@@ -22,12 +22,25 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static('public'));
 
-// Stockage en mémoire des trajets
+// Stockage en mémoire des trajets et positions
 const trips = new Map(); // userId -> trip data
 const userSockets = new Map(); // userId -> socketId
+const userPositions = new Map(); // userId -> {lat, lon, timestamp}
 
 // Port
 const PORT = process.env.PORT || 3000;
+
+// Fonction pour calculer la distance entre deux points (formule de Haversine)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371000; // Rayon de la Terre en mètres
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+            Math.sin(dLon/2) * Math.sin(dLon/2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  return R * c; // Distance en mètres
+}
 
 // Route principale
 app.get('/', (req, res) => {
@@ -63,6 +76,66 @@ io.on('connection', (socket) => {
   
   // Envoi du nombre d'utilisateurs connectés
   io.emit('users_count', trips.size);
+
+  // Mise à jour de la position de l'utilisateur
+  socket.on('update_position', (data) => {
+    const { lat, lon } = data;
+    
+    if (lat && lon) {
+      userPositions.set(socket.id, {
+        lat,
+        lon,
+        timestamp: Date.now()
+      });
+      
+      console.log(`📍 Position mise à jour pour ${socket.id}: ${lat}, ${lon}`);
+    }
+  });
+
+  // Demande des utilisateurs à proximité
+  socket.on('get_nearby_users', () => {
+    const currentUserPos = userPositions.get(socket.id);
+    const nearbyUsers = [];
+    
+    // Parcourir tous les utilisateurs connectés
+    trips.forEach((trip, userId) => {
+      if (userId !== socket.id) {
+        const userPos = userPositions.get(userId);
+        
+        let distance = null;
+        
+        // Calculer la distance si les deux positions sont disponibles
+        if (currentUserPos && userPos) {
+          distance = calculateDistance(
+            currentUserPos.lat,
+            currentUserPos.lon,
+            userPos.lat,
+            userPos.lon
+          );
+        }
+        
+        nearbyUsers.push({
+          userId: userId,
+          userName: trip.userName,
+          position: userPos || null,
+          distance: distance,
+          hasTrip: true,
+          mode: trip.mode,
+          departureTime: trip.departureTime
+        });
+      }
+    });
+    
+    // Trier par distance (les plus proches en premier)
+    nearbyUsers.sort((a, b) => {
+      if (a.distance === null) return 1;
+      if (b.distance === null) return -1;
+      return a.distance - b.distance;
+    });
+    
+    socket.emit('nearby_users', { users: nearbyUsers });
+    console.log(`👭 Envoi de ${nearbyUsers.length} utilisateurs à proximité à ${socket.id}`);
+  });
 
   // Réception d'un nouveau trajet
   socket.on('submit_trip', async (data) => {
@@ -217,9 +290,10 @@ io.on('connection', (socket) => {
     if (userTrip) {
       console.log(`👋 Déconnexion: ${userTrip.userName}`);
       
-      // Supprimer le trajet
+      // Supprimer le trajet et la position
       trips.delete(socket.id);
       userSockets.delete(socket.id);
+      userPositions.delete(socket.id);
       
       // Notifier les autres utilisateurs
       socket.broadcast.emit('user_left', {
