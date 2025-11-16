@@ -304,6 +304,55 @@ io.on('connection', (socket) => {
     });
   });
 
+  // Alerte SOS
+  socket.on('send_sos', (data) => {
+    const { position, userName, timestamp } = data;
+    
+    console.log(`🚨 ALERTE SOS de ${userName} à ${position.lat}, ${position.lon}`);
+    
+    // Trouver les 20 utilisatrices les plus proches
+    const nearbyUsers = [];
+    
+    userPositions.forEach((userPos, userId) => {
+      if (userId !== socket.id && userPos) {
+        const distance = calculateDistance(
+          position.lat,
+          position.lon,
+          userPos.lat,
+          userPos.lon
+        );
+        
+        nearbyUsers.push({
+          userId: userId,
+          distance: distance,
+          position: userPos
+        });
+      }
+    });
+    
+    // Trier par distance et prendre les 20 plus proches
+    nearbyUsers.sort((a, b) => a.distance - b.distance);
+    const closest20 = nearbyUsers.slice(0, 20);
+    
+    console.log(`📢 Envoi de l'alerte SOS à ${closest20.length} utilisatrices`);
+    
+    // Envoyer l'alerte aux 20 plus proches
+    closest20.forEach(user => {
+      io.to(user.userId).emit('sos_alert', {
+        userId: socket.id,
+        userName: userName,
+        position: position,
+        distance: user.distance,
+        timestamp: timestamp
+      });
+    });
+    
+    // Confirmer l'envoi à l'émetteur
+    socket.emit('sos_sent', {
+      recipientCount: closest20.length
+    });
+  });
+
   // Déconnexion
   socket.on('disconnect', () => {
     const userTrip = trips.get(socket.id);

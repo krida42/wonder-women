@@ -21,129 +21,121 @@
                 </span>
             </div>
             <p class="subtitle">Rentrez en sécurité, ensemble</p>
-            
-            <!-- Tab Navigation -->
-            <div class="tab-navigation">
-                <button class="tab-btn active" data-tab="nearby">
-                    🗺️ À proximité
-                </button>
-                <button class="tab-btn" data-tab="trip">
-                    🚶‍♀️ Mon trajet
-                </button>
-            </div>
         </header>
 
         <main>
-            <!-- Nearby View -->
-            <div class="tab-content active" id="nearbyTab">
-                <div class="nearby-view">
-                    <div class="nearby-map">
-                        <div id="nearbyMap"></div>
-                        <div class="map-info">
-                            <span>👭 <span id="nearbyCount">0</span> femme(s) à proximité</span>
-                            <span class="map-hint">Cliquez sur un marqueur pour discuter</span>
-                        </div>
-                    </div>
+            <!-- Map View (Full Screen) -->
+            <div class="map-view">
+                <div id="nearbyMap"></div>
+                <div class="map-info">
+                    <span>👭 <span id="nearbyCount">0</span> femme(s) à proximité</span>
+                    <span class="map-hint">Cliquez sur un marqueur pour discuter</span>
                 </div>
             </div>
 
-            <!-- Trip View -->
-            <div class="tab-content" id="tripTab">
-                <!-- Safety Banner -->
-                <div class="safety-banner">
-                    <h3>🛡️ Votre sécurité avant tout</h3>
-                    <p>Trouvez des personnes qui rentrent dans votre direction</p>
-                </div>
+            <!-- Bottom Navigation Bar -->
+            <nav class="bottom-navbar">
+                <button class="nav-btn" id="tripBtn">
+                    <span class="nav-icon">🏠</span>
+                    <span class="nav-label">Rentrer</span>
+                </button>
+                <button class="nav-btn nav-btn-sos" id="sosBtn">
+                    <span class="nav-icon">🚨</span>
+                    <span class="nav-label">SOS</span>
+                </button>
+                <button class="nav-btn" id="settingsBtn">
+                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-label">Paramètres</span>
+                </button>
+            </nav>
 
-                <!-- Formulaire de trajet -->
-                <section class="trip-form-section">
+            <!-- Trip Bottom Sheet -->
+            <div class="bottom-sheet" id="tripSheet">
+                <div class="bottom-sheet-content">
+                    <div class="bottom-sheet-handle"></div>
+                    <h2 class="bottom-sheet-title">🏠 Planifier votre trajet</h2>
+                    
                     <form id="tripForm">
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="userName">💁‍♀️ Prénom (optionnel)</label>
-                                <input type="text" id="userName" placeholder="Ex: Sarah">
+                        <div class="form-group">
+                            <label for="origin">📍 D'où partez-vous ?</label>
+                            <div class="input-with-button">
+                                <input type="text" id="origin" placeholder="Position actuelle" required>
+                                <button type="button" class="btn-location" id="useLocationBtn" title="Ma position">
+                                    📍
+                                </button>
                             </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="origin">📍 D'où partez-vous ?</label>
-                                <div class="input-with-button">
-                                    <input type="text" id="origin" placeholder="Votre position..." required>
-                                    <button type="button" class="btn-location" id="useLocationBtn" title="Ma position">
-                                        📍
-                                    </button>
-                                </div>
-                                <small class="hint-text">Position détectée automatiquement</small>
-                            </div>
+                        <div class="form-group">
+                            <label for="destination">🏠 Où allez-vous ?</label>
+                            <input type="text" id="destination" placeholder="Entrez votre destination" required>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="destination">🏠 Où allez-vous ?</label>
-                                <input type="text" id="destination" placeholder="Votre destination" required>
+                        <div class="form-group">
+                            <label for="departureTime">🕐 Quand ?</label>
+                            <div class="time-selector">
+                                <button type="button" class="time-option active" data-time="now">Maintenant</button>
+                                <button type="button" class="time-option" data-time="15">Dans 15 min</button>
+                                <button type="button" class="time-option" data-time="30">Dans 30 min</button>
+                                <button type="button" class="time-option" data-time="custom">Personnalisé</button>
                             </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="mode">🚶‍♀️ Comment ?</label>
-                                <select id="mode">
-                                    <option value="transit">🚇 Métro / Bus</option>
-                                    <option value="walking">🚶‍♀️ À pied</option>
-                                    <option value="bicycling">🚴‍♀️ Vélo</option>
-                                    <option value="driving">🚗 Voiture / Taxi</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="departureTime">🕐 Quand ?</label>
-                                <input type="datetime-local" id="departureTime" required>
-                            </div>
+                            <input type="datetime-local" id="departureTime" style="display: none;">
                         </div>
 
                         <button type="submit" class="btn-primary" id="submitBtn">
                             💜 Trouver des compagnes
                         </button>
                     </form>
-                </section>
+                </div>
+            </div>
 
-                <!-- Informations du trajet -->
-                <section class="trip-info-section" id="tripInfoSection" style="display: none;">
-                    <h2>✅ Votre trajet</h2>
-                    <div class="trip-info" id="tripInfo"></div>
-                </section>
-
-                <!-- Liste des matches -->
-                <section class="matches-section">
-                    <h2>👭 Compagnes de route</h2>
-                    <div class="matches-header">
-                        <span id="matchesCount">0 personne</span>
-                        <button class="btn-refresh" id="refreshBtn" style="display: none;">
-                            🔄
-                        </button>
-                    </div>
-                    <div id="matchesList" class="matches-list">
-                        <div class="no-matches">
-                            <p>🔍 Recherche en cours...</p>
-                            <p class="hint">D'autres personnes vont bientôt se connecter</p>
+            <!-- Settings Bottom Sheet -->
+            <div class="bottom-sheet" id="settingsSheet">
+                <div class="bottom-sheet-content">
+                    <div class="bottom-sheet-handle"></div>
+                    <h2 class="bottom-sheet-title">⚙️ Paramètres</h2>
+                    
+                    <div class="settings-section">
+                        <div class="form-group">
+                            <label for="userName">💁‍♀️ Votre pseudo</label>
+                            <input type="text" id="userName" placeholder="Ex: Sarah">
+                            <button type="button" class="btn-secondary" id="saveUserNameBtn">
+                                Enregistrer
+                            </button>
                         </div>
                     </div>
-                </section>
+                </div>
+            </div>
 
-                <!-- Safety Tips -->
-                <section class="safety-tips">
-                    <h4>🛡️ Conseils de sécurité</h4>
-                    <ul>
-                        <li>Restez en groupe dans les lieux publics</li>
-                        <li>Partagez votre position avec un proche</li>
-                        <li>Gardez votre téléphone chargé</li>
-                        <li>Faites confiance à votre instinct</li>
-                        <li>Urgence : 17 (Police) ou 112</li>
-                    </ul>
-                </section>
+            <!-- SOS Confirmation Modal -->
+            <div class="sos-modal" id="sosModal">
+                <div class="sos-modal-content">
+                    <div class="sos-modal-icon">🚨</div>
+                    <h2>Envoyer une alerte SOS ?</h2>
+                    <p>Les 20 femmes les plus proches seront alertées de votre situation d'urgence.</p>
+                    <div class="sos-modal-buttons">
+                        <button class="btn-cancel" id="cancelSosBtn">Annuler</button>
+                        <button class="btn-sos-confirm" id="confirmSosBtn">🚨 Envoyer l'alerte</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SOS Alert Received Modal -->
+            <div class="sos-alert-modal" id="sosAlertModal">
+                <div class="sos-alert-content">
+                    <div class="sos-alert-header">
+                        <span class="sos-alert-icon">🚨</span>
+                        <h3>ALERTE D'URGENCE</h3>
+                    </div>
+                    <div class="sos-alert-body">
+                        <p class="sos-alert-name"><strong id="sosUserName">Une femme</strong> a besoin d'aide !</p>
+                        <p class="sos-alert-distance">📍 À <strong id="sosDistance">...</strong> de vous</p>
+                    </div>
+                    <div class="sos-alert-buttons">
+                        <button class="btn-sos-ignore" id="ignoreSosBtn">Ignorer</button>
+                        <button class="btn-sos-help" id="helpSosBtn">🗺️ Voir sa position</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Notifications -->

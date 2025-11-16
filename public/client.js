@@ -15,6 +15,11 @@ let currentUserPosition = null;
 let myMarker = null;
 let currentChatUserId = null;
 let currentChatUserName = null;
+let currentUserName = localStorage.getItem('userName') || `User-${Date.now().toString().slice(-6)}`;
+let selectedDepartureTime = 'now';
+let sosAlertActive = false;
+let sosUserId = null;
+let sosMarker = null;
 
 // Initialisation de la carte Leaflet (trajet)
 function initMap() {
@@ -62,9 +67,8 @@ function initNearbyMap() {
 document.addEventListener('DOMContentLoaded', async () => {
     console.log('🚀 Initialisation de l\'application...');
     
-    // Initialiser les cartes
+    // Initialiser la carte
     initNearbyMap();
-    // initMap(); // Carte de trajet initialisée plus tard si nécessaire
     
     setDefaultDepartureTime();
     setupEventListeners();
@@ -73,28 +77,52 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Géolocalisation automatique
     autoGetCurrentLocation();
     
+    // Charger le pseudo sauvegardé
+    const savedName = localStorage.getItem('userName');
+    if (savedName) {
+        document.getElementById('userName').value = savedName;
+        currentUserName = savedName;
+    }
+    
     console.log('✅ Application initialisée');
 });
 
 // Configuration des événements
 function setupEventListeners() {
-    // Tabs navigation
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', () => {
-            switchTab(btn.dataset.tab);
-        });
-    });
+    // Bottom navbar
+    document.getElementById('tripBtn').addEventListener('click', openTripSheet);
+    document.getElementById('sosBtn').addEventListener('click', openSOSModal);
+    document.getElementById('settingsBtn').addEventListener('click', openSettingsSheet);
     
     // Formulaire
     document.getElementById('tripForm').addEventListener('submit', handleTripSubmit);
+    document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
     
-    // Boutons
-    document.getElementById('refreshBtn').addEventListener('click', () => {
-        socket.emit('refresh_matches');
-        showNotification('Actualisation...', 'info');
+    // Time selector
+    document.querySelectorAll('.time-option').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            document.querySelectorAll('.time-option').forEach(b => b.classList.remove('active'));
+            e.target.classList.add('active');
+            selectedDepartureTime = e.target.dataset.time;
+            
+            if (selectedDepartureTime === 'custom') {
+                document.getElementById('departureTime').style.display = 'block';
+            } else {
+                document.getElementById('departureTime').style.display = 'none';
+            }
+        });
     });
     
-    document.getElementById('useLocationBtn').addEventListener('click', useCurrentLocation);
+    // Settings
+    document.getElementById('saveUserNameBtn').addEventListener('click', saveUserName);
+    
+    // SOS Modal
+    document.getElementById('cancelSosBtn').addEventListener('click', closeSOSModal);
+    document.getElementById('confirmSosBtn').addEventListener('click', sendSOSAlert);
+    
+    // SOS Alert
+    document.getElementById('ignoreSosBtn').addEventListener('click', closeSOSAlert);
+    document.getElementById('helpSosBtn').addEventListener('click', helpSOSUser);
     
     // Chat
     document.getElementById('closeChatBtn').addEventListener('click', closeChat);
@@ -104,48 +132,200 @@ function setupEventListeners() {
             sendMessage();
         }
     });
+    
+    // Close bottom sheets on background click
+    document.getElementById('tripSheet').addEventListener('click', (e) => {
+        if (e.target.id === 'tripSheet') {
+            closeTripSheet();
+        }
+    });
+    
+    document.getElementById('settingsSheet').addEventListener('click', (e) => {
+        if (e.target.id === 'settingsSheet') {
+            closeSettingsSheet();
+        }
+    });
 }
 
-// Changer de tab
-function switchTab(tabName) {
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-        if (btn.dataset.tab === tabName) {
-            btn.classList.add('active');
-        }
+// Bottom Sheet Functions
+function openTripSheet() {
+    document.getElementById('tripSheet').classList.add('active');
+}
+
+function closeTripSheet() {
+    document.getElementById('tripSheet').classList.remove('active');
+}
+
+function openSettingsSheet() {
+    document.getElementById('settingsSheet').classList.add('active');
+}
+
+function closeSettingsSheet() {
+    document.getElementById('settingsSheet').classList.remove('active');
+}
+
+// Settings Functions
+function saveUserName() {
+    const userName = document.getElementById('userName').value.trim();
+    if (userName) {
+        currentUserName = userName;
+        localStorage.setItem('userName', userName);
+        showNotification('Pseudo enregistré !', 'success');
+        closeSettingsSheet();
+    } else {
+        showNotification('Veuillez entrer un pseudo', 'error');
+    }
+}
+
+// SOS Functions
+function openSOSModal() {
+    document.getElementById('sosModal').classList.add('active');
+    // Play alert sound if available
+    playAlertSound();
+}
+
+function closeSOSModal() {
+    document.getElementById('sosModal').classList.remove('active');
+}
+
+function sendSOSAlert() {
+    if (!currentUserPosition) {
+        showNotification('Position non disponible', 'error');
+        closeSOSModal();
+        return;
+    }
+    
+    // Envoyer l'alerte au serveur
+    socket.emit('send_sos', {
+        position: currentUserPosition,
+        userName: currentUserName,
+        timestamp: new Date().toISOString()
     });
     
-    document.querySelectorAll('.tab-content').forEach(content => {
-        content.classList.remove('active');
-    });
+    sosAlertActive = true;
+    closeSOSModal();
+    showNotification('🚨 Alerte SOS envoyée !', 'success');
     
-    const activeTab = document.getElementById(`${tabName}Tab`);
-    if (activeTab) {
-        activeTab.classList.add('active');
+    // Vibration si disponible
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200]);
+    }
+}
+
+function closeSOSAlert() {
+    document.getElementById('sosAlertModal').classList.remove('active');
+    sosUserId = null;
+    
+    // Retirer le marqueur SOS s'il existe
+    if (sosMarker && nearbyMap) {
+        nearbyMap.removeLayer(sosMarker);
+        sosMarker = null;
+    }
+}
+
+function helpSOSUser() {
+    if (!sosUserId) return;
+    
+    closeSOSAlert();
+    
+    // Afficher la position de l'utilisateur en détresse sur la carte
+    const sosUser = Array.from(userMarkers.entries()).find(([id]) => id === sosUserId);
+    
+    if (sosUser && sosUser[1]) {
+        const marker = sosUser[1];
+        const latLng = marker.getLatLng();
         
-        if (tabName === 'nearby' && nearbyMap) {
-            setTimeout(() => {
-                nearbyMap.invalidateSize();
-                requestNearbyUsers();
-            }, 100);
-        } else if (tabName === 'trip') {
-            // Initialiser la carte de trajet si elle n'existe pas encore
-            if (!map) {
-                setTimeout(() => {
-                    initMap();
-                }, 100);
-            } else {
-                setTimeout(() => {
-                    map.invalidateSize();
-                }, 100);
-            }
+        // Centrer la carte sur l'utilisateur
+        nearbyMap.setView(latLng, 16);
+        
+        // Créer un marqueur SOS spécial
+        if (sosMarker) {
+            nearbyMap.removeLayer(sosMarker);
         }
+        
+        const sosIcon = L.divIcon({
+            className: 'sos-marker',
+            html: '🚨',
+            iconSize: [50, 50]
+        });
+        
+        sosMarker = L.marker(latLng, { icon: sosIcon })
+            .addTo(nearbyMap)
+            .bindPopup('<b>🚨 URGENCE</b><br>Cette personne a besoin d\'aide!')
+            .openPopup();
+        
+        // Créer un itinéraire si on a notre position
+        if (currentUserPosition) {
+            createRouteToSOS(latLng);
+        }
+        
+        showNotification('Position affichée sur la carte', 'info');
+    }
+}
+
+function createRouteToSOS(destination) {
+    if (!currentUserPosition) return;
+    
+    // Créer une ligne entre notre position et la destination
+    const line = L.polyline([
+        [currentUserPosition.lat, currentUserPosition.lon],
+        [destination.lat, destination.lng]
+    ], {
+        color: '#ef4444',
+        weight: 4,
+        opacity: 0.7,
+        dashArray: '10, 10'
+    }).addTo(nearbyMap);
+    
+    // Calculer la distance
+    const distance = calculateDistance(
+        currentUserPosition.lat,
+        currentUserPosition.lon,
+        destination.lat,
+        destination.lng
+    );
+    
+    showNotification(`Distance: ${(distance / 1000).toFixed(2)} km`, 'info');
+}
+
+function playAlertSound() {
+    // Créer un son d'alerte simple avec Web Audio API
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+        console.log('Audio not available');
     }
 }
 
 // Demander les utilisateurs à proximité
 function requestNearbyUsers() {
     socket.emit('get_nearby_users');
+}
+
+// Fonction helper pour calculer la distance
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Rayon de la Terre en mètres
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
 }
 
 // Charger Google Maps API
@@ -156,7 +336,8 @@ async function loadGoogleMapsAPI() {
         googleMapsApiKey = config.googleMapsApiKey;
         
         if (!googleMapsApiKey || googleMapsApiKey === 'YOUR_API_KEY_HERE') {
-            console.warn('⚠️ Clé API non configurée');
+            console.warn('⚠️ Clé API non configurée - Utilisation de Nominatim');
+            setupNominatimAutocomplete();
             return;
         }
         
@@ -169,12 +350,14 @@ async function loadGoogleMapsAPI() {
         
     } catch (error) {
         console.error('Erreur API:', error);
+        setupNominatimAutocomplete();
     }
 }
 
-// Autocomplétion
+// Autocomplétion Google Maps
 function initAutocomplete() {
     if (typeof google === 'undefined' || !google.maps || !google.maps.places) {
+        setupNominatimAutocomplete();
         return;
     }
     
@@ -203,7 +386,83 @@ function initAutocomplete() {
         }
     });
     
-    console.log('✅ Autocomplétion activée');
+    console.log('✅ Autocomplétion Google Maps activée');
+}
+
+// Autocomplétion avec Nominatim (OpenStreetMap)
+function setupNominatimAutocomplete() {
+    const destinationInput = document.getElementById('destination');
+    let timeout;
+    let suggestionsDiv = document.getElementById('destination-suggestions');
+    
+    // Créer le conteneur de suggestions s'il n'existe pas
+    if (!suggestionsDiv) {
+        suggestionsDiv = document.createElement('div');
+        suggestionsDiv.id = 'destination-suggestions';
+        suggestionsDiv.className = 'autocomplete-suggestions';
+        destinationInput.parentElement.appendChild(suggestionsDiv);
+    }
+    
+    destinationInput.addEventListener('input', (e) => {
+        const query = e.target.value.trim();
+        
+        clearTimeout(timeout);
+        
+        if (query.length < 3) {
+            suggestionsDiv.style.display = 'none';
+            return;
+        }
+        
+        timeout = setTimeout(async () => {
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=fr&limit=5&addressdetails=1`,
+                    {
+                        headers: {
+                            'User-Agent': 'WonderWomen/1.0'
+                        }
+                    }
+                );
+                
+                if (response.ok) {
+                    const results = await response.json();
+                    
+                    if (results.length > 0) {
+                        suggestionsDiv.innerHTML = '';
+                        suggestionsDiv.style.display = 'block';
+                        
+                        results.forEach(result => {
+                            const item = document.createElement('div');
+                            item.className = 'autocomplete-item';
+                            item.textContent = result.display_name;
+                            
+                            item.addEventListener('click', () => {
+                                destinationInput.value = result.display_name;
+                                destinationInput.dataset.lat = result.lat;
+                                destinationInput.dataset.lon = result.lon;
+                                suggestionsDiv.style.display = 'none';
+                            });
+                            
+                            suggestionsDiv.appendChild(item);
+                        });
+                    } else {
+                        suggestionsDiv.style.display = 'none';
+                    }
+                }
+            } catch (error) {
+                console.error('Erreur autocomplétion:', error);
+            }
+        }, 300);
+    });
+    
+    // Fermer les suggestions en cliquant ailleurs
+    document.addEventListener('click', (e) => {
+        if (e.target !== destinationInput && !suggestionsDiv.contains(e.target)) {
+            suggestionsDiv.style.display = 'none';
+        }
+    });
+    
+    console.log('✅ Autocomplétion Nominatim activée');
 }
 
 // Heure par défaut
@@ -218,10 +477,11 @@ async function autoGetCurrentLocation() {
     const originInput = document.getElementById('origin');
     
     if (!navigator.geolocation) {
+        originInput.placeholder = 'Entrez votre position de départ';
         return;
     }
     
-    originInput.placeholder = '📍 Détection...';
+    originInput.placeholder = '📍 Détection en cours...';
     
     try {
         const position = await new Promise((resolve, reject) => {
@@ -237,7 +497,17 @@ async function autoGetCurrentLocation() {
         
         console.log(`📍 Position: ${latitude}, ${longitude}`);
         
-        await reverseGeocode(latitude, longitude, originInput);
+        // Essayer le géocodage inverse
+        const address = await reverseGeocode(latitude, longitude);
+        
+        if (address) {
+            originInput.value = address;
+            originInput.placeholder = 'Position actuelle';
+        } else {
+            // Si le géocodage échoue, utiliser "Position actuelle" comme texte
+            originInput.value = 'Position actuelle';
+            originInput.placeholder = 'Position actuelle';
+        }
         
         // Centrer la carte de proximité
         if (nearbyMap) {
@@ -266,7 +536,8 @@ async function autoGetCurrentLocation() {
         
     } catch (error) {
         console.log('⚠️ Géolocalisation échouée');
-        originInput.placeholder = 'Ex: Tour Eiffel, Paris';
+        originInput.placeholder = 'Entrez votre position de départ';
+        originInput.value = '';
     }
 }
 
@@ -295,7 +566,13 @@ async function useCurrentLocation() {
         const { latitude, longitude } = position.coords;
         currentUserPosition = { lat: latitude, lon: longitude };
         
-        await reverseGeocode(latitude, longitude, originInput);
+        const address = await reverseGeocode(latitude, longitude);
+        
+        if (address) {
+            originInput.value = address;
+        } else {
+            originInput.value = 'Position actuelle';
+        }
         
         socket.emit('update_position', { lat: latitude, lon: longitude });
         
@@ -310,7 +587,7 @@ async function useCurrentLocation() {
 }
 
 // Géocodage inverse
-async function reverseGeocode(lat, lon, inputElement) {
+async function reverseGeocode(lat, lon) {
     try {
         if (typeof google !== 'undefined' && google.maps && google.maps.Geocoder) {
             const geocoder = new google.maps.Geocoder();
@@ -326,12 +603,28 @@ async function reverseGeocode(lat, lon, inputElement) {
                 });
             });
             
-            inputElement.value = result.formatted_address;
+            return result.formatted_address;
         } else {
-            inputElement.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+            // Si Google Maps n'est pas disponible, utiliser Nominatim (OpenStreetMap)
+            const response = await fetch(
+                `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1`,
+                {
+                    headers: {
+                        'User-Agent': 'WonderWomen/1.0'
+                    }
+                }
+            );
+            
+            if (response.ok) {
+                const data = await response.json();
+                return data.display_name || null;
+            }
+            
+            return null;
         }
     } catch (error) {
-        inputElement.value = `${lat.toFixed(6)}, ${lon.toFixed(6)}`;
+        console.log('Géocodage inverse échoué:', error);
+        return null;
     }
 }
 
@@ -353,12 +646,34 @@ async function handleTripSubmit(e) {
         return;
     }
     
+    // Calculer le temps de départ
+    let departureTime;
+    const now = new Date();
+    
+    switch(selectedDepartureTime) {
+        case 'now':
+            departureTime = now.toISOString();
+            break;
+        case '15':
+            departureTime = new Date(now.getTime() + 15 * 60000).toISOString();
+            break;
+        case '30':
+            departureTime = new Date(now.getTime() + 30 * 60000).toISOString();
+            break;
+        case 'custom':
+            const customTime = document.getElementById('departureTime').value;
+            departureTime = customTime ? new Date(customTime).toISOString() : now.toISOString();
+            break;
+        default:
+            departureTime = now.toISOString();
+    }
+    
     const tripData = {
-        userName: document.getElementById('userName').value || null,
+        userName: currentUserName,
         origin: originAddress,
         destination: destinationAddress,
-        mode: document.getElementById('mode').value,
-        departureTime: document.getElementById('departureTime').value
+        mode: 'transit', // Toujours transit + marche
+        departureTime: departureTime
     };
     
     socket.emit('submit_trip', tripData);
@@ -673,56 +988,6 @@ socket.on('nearby_users', (data) => {
     displayNearbyUsers(data.users);
 });
 
-socket.on('trip_confirmed', (data) => {
-    console.log('✅ Trajet confirmé', data);
-    
-    currentTrip = data.trip;
-    
-    const submitBtn = document.getElementById('submitBtn');
-    submitBtn.disabled = false;
-    submitBtn.innerHTML = '💜 Trouver des compagnes';
-    
-    const tripInfoSection = document.getElementById('tripInfoSection');
-    const tripInfo = document.getElementById('tripInfo');
-    
-    tripInfo.innerHTML = `
-        <p><strong>Distance :</strong> ${(data.trip.distance / 1000).toFixed(2)} km</p>
-        <p><strong>Durée :</strong> ${Math.round(data.trip.duration / 60)} min</p>
-        <p><strong>Points :</strong> ${data.trip.polyline.length}</p>
-        ${data.trip.isMock ? '<p style="color: #fb923c;"><strong>⚠️ Simulé</strong></p>' : ''}
-    `;
-    
-    tripInfoSection.style.display = 'block';
-    
-    if (userPolyline) {
-        map.removeLayer(userPolyline);
-    }
-    
-    userPolyline = displayPolyline(data.trip.polyline, '#ff6b9d', 5, 0.8);
-    
-    const origin = {
-        lat: data.trip.polyline[0][0],
-        lon: data.trip.polyline[0][1]
-    };
-    const destination = {
-        lat: data.trip.polyline[data.trip.polyline.length - 1][0],
-        lon: data.trip.polyline[data.trip.polyline.length - 1][1]
-    };
-    displayMarkers(origin, destination, '#ff6b9d');
-    
-    fitMapToPolyline(data.trip.polyline);
-    
-    showNotification('Trajet enregistré !', 'success');
-});
-
-socket.on('matches_update', (data) => {
-    console.log('🎯 Matches:', data.matches);
-    displayMatches(data.matches);
-    
-    if (data.matches.length > 0) {
-        showNotification(`${data.matches.length} match${data.matches.length > 1 ? 'es' : ''} !`, 'success');
-    }
-});
 
 socket.on('new_user_joined', (data) => {
     console.log('👋 Nouveau:', data.userName);
@@ -746,6 +1011,47 @@ socket.on('receive_message', (data) => {
         // Sinon, afficher une notification
         showNotification(`💬 Message de ${data.fromName}`, 'info');
     }
+});
+
+socket.on('sos_alert', (data) => {
+    console.log('🚨 Alerte SOS reçue:', data);
+    
+    // Afficher la modale d'alerte
+    sosUserId = data.userId;
+    document.getElementById('sosUserName').textContent = data.userName;
+    document.getElementById('sosDistance').textContent = data.distance ? 
+        `${(data.distance / 1000).toFixed(1)} km` : 'calcul...';
+    
+    document.getElementById('sosAlertModal').classList.add('active');
+    
+    // Son d'alerte
+    playAlertSound();
+    
+    // Vibration
+    if (navigator.vibrate) {
+        navigator.vibrate([300, 100, 300, 100, 300]);
+    }
+    
+    // Notification visuelle
+    showNotification(`🚨 ${data.userName} a besoin d'aide !`, 'error');
+});
+
+socket.on('trip_confirmed', (data) => {
+    console.log('✅ Trajet confirmé', data);
+    
+    currentTrip = data.trip;
+    
+    const submitBtn = document.getElementById('submitBtn');
+    submitBtn.disabled = false;
+    submitBtn.innerHTML = '💜 Trouver des compagnes';
+    
+    // Fermer le bottom sheet
+    closeTripSheet();
+    
+    showNotification('Trajet enregistré !', 'success');
+    
+    // Demander les utilisateurs à proximité
+    requestNearbyUsers();
 });
 
 socket.on('error', (data) => {
