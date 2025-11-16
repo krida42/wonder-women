@@ -978,12 +978,19 @@ function displaySafePlacesOnMap() {
         marker.addListener('click', () => {
             const distance = calculateDistance(
                 currentUserPosition.lat,
-                currentUserPosition.lng,
+                currentUserPosition.lon,
                 place.lat,
                 place.lng
             );
             const typeTranslated = getTypeTranslation(place.type);
-            const distanceText = distance < 1000 ? Math.round(distance) + ' m' : (distance / 1000).toFixed(1) + ' km';
+            let distanceText;
+            if (isNaN(distance) || distance === undefined) {
+                distanceText = '-- --';
+            } else if (distance < 1000) {
+                distanceText = Math.round(distance) + ' M';
+            } else {
+                distanceText = (distance / 1000).toFixed(1) + ' KM';
+            }
             const infoWindow = new google.maps.InfoWindow({
                 content: `<div style="padding: 8px; font-size: 12px;">
                     <strong>${place.emoji} ${place.name}</strong><br/>
@@ -1028,16 +1035,17 @@ function displaySafePlaces() {
     const listContainer = document.getElementById('safePlacesList');
 
     if (!currentUserPosition) {
-        listContainer.innerHTML = '<p class="error-text">Position non disponible</p>';
+        listContainer.innerHTML = '<p class="error-text">Location unavailable</p>';
         return;
     }
 
     // Calculer la distance pour chaque lieu sûr
+    // Note: currentUserPosition uses 'lon', not 'lng'
     const placesWithDistance = SAFE_PLACES_DATA.map(place => ({
         ...place,
         distance: calculateDistance(
             currentUserPosition.lat,
-            currentUserPosition.lng,
+            currentUserPosition.lon,
             place.lat,
             place.lng
         )
@@ -1048,13 +1056,20 @@ function displaySafePlaces() {
 
     // Générer le HTML
     if (placesWithDistance.length === 0) {
-        listContainer.innerHTML = '<p class="error-text">Aucun lieu sûr trouvé</p>';
+        listContainer.innerHTML = '<p class="error-text">No safe places found</p>';
         return;
     }
 
     listContainer.innerHTML = placesWithDistance.map(place => {
         const typeTranslated = getTypeTranslation(place.type);
-        const distanceText = place.distance < 1000 ? Math.round(place.distance) + ' m' : (place.distance / 1000).toFixed(1) + ' km';
+        let distanceText;
+        if (isNaN(place.distance) || place.distance === undefined) {
+            distanceText = '-- --';
+        } else if (place.distance < 1000) {
+            distanceText = Math.round(place.distance) + ' M';
+        } else {
+            distanceText = (place.distance / 1000).toFixed(1) + ' KM';
+        }
         return `
         <div class="safe-place-item">
             <div class="safe-place-emoji">${place.emoji}</div>
