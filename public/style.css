@@ -44,9 +44,20 @@ header {
 
 .header-top {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 8px;
+    position: relative;
+}
+
+.header-top h1 {
+    flex: 1;
+    text-align: center;
+}
+
+.header-top .users-count {
+    position: absolute;
+    right: 0;
 }
 
 header h1 {
