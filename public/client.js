@@ -20,6 +20,7 @@ let selectedDepartureTime = 'now';
 let sosAlertActive = false;
 let sosUserId = null;
 let sosMarker = null;
+let currentMatches = [];
 
 // Initialisation de la carte Leaflet (trajet)
 function initMap() {
@@ -130,6 +131,15 @@ function setupEventListeners() {
     document.getElementById('chatInput').addEventListener('keypress', (e) => {
         if (e.key === 'Enter') {
             sendMessage();
+        }
+    });
+    
+    // Matches modal
+    document.getElementById('matchesToggleBtn').addEventListener('click', openMatchesModal);
+    document.getElementById('closeMatchesBtn').addEventListener('click', closeMatchesModal);
+    document.getElementById('matchesModal').addEventListener('click', (e) => {
+        if (e.target.id === 'matchesModal') {
+            closeMatchesModal();
         }
     });
     
@@ -309,11 +319,6 @@ function playAlertSound() {
     } catch (e) {
         console.log('Audio not available');
     }
-}
-
-// Demander les utilisateurs à proximité
-function requestNearbyUsers() {
-    socket.emit('get_nearby_users');
 }
 
 // Fonction helper pour calculer la distance
@@ -679,42 +684,41 @@ async function handleTripSubmit(e) {
     socket.emit('submit_trip', tripData);
 }
 
-// Afficher utilisateurs à proximité
-function displayNearbyUsers(users) {
-    const nearbyCount = document.getElementById('nearbyCount');
+// Afficher uniquement les matches sur la carte
+function displayMatchesOnMap(matches) {
+    const matchesMapCount = document.getElementById('matchesMapCount');
     
-    nearbyCount.textContent = users.length;
+    matchesMapCount.textContent = matches.length;
     
     // Effacer anciens marqueurs
     userMarkers.forEach(marker => nearbyMap.removeLayer(marker));
     userMarkers.clear();
     
-    if (users.length === 0) {
+    if (matches.length === 0) {
         return;
     }
     
-    users.forEach(user => {
-        // Marqueur sur la carte
-        if (user.position) {
+    matches.forEach(match => {
+        // Marqueur sur la carte uniquement pour les matches
+        if (match.trip && match.trip.polyline && match.trip.polyline.length > 0) {
+            const firstPoint = match.trip.polyline[0];
+            
             const markerIcon = L.divIcon({
                 className: 'user-marker',
                 html: '👤',
                 iconSize: [35, 35]
             });
             
-            const distance = user.distance ? `${(user.distance / 1000).toFixed(1)} km` : '?';
-            const hasTrip = user.hasTrip ? '🚶‍♀️ En trajet' : '📍 En ligne';
-            
-            const marker = L.marker([user.position.lat, user.position.lon], { icon: markerIcon })
+            const marker = L.marker([firstPoint[0], firstPoint[1]], { icon: markerIcon })
                 .addTo(nearbyMap)
-                .bindPopup(`<b>${user.userName}</b><br>${hasTrip}<br>${distance}`);
+                .bindPopup(`<b>${match.userName}</b><br>🎯 Match: ${match.similarity}%`);
             
             // Ajouter un événement de clic sur le marqueur
             marker.on('click', () => {
-                openChat(user.userId, user.userName);
+                openChat(match.userId, match.userName);
             });
             
-            userMarkers.set(user.userId, marker);
+            userMarkers.set(match.userId, marker);
         }
     });
 }
@@ -759,70 +763,70 @@ function fitMapToPolyline(polyline) {
     map.fitBounds(bounds, { padding: [50, 50] });
 }
 
-// Afficher matches
-function displayMatches(matches) {
-    const matchesList = document.getElementById('matchesList');
-    const matchesCount = document.getElementById('matchesCount');
-    const refreshBtn = document.getElementById('refreshBtn');
+// Afficher matches dans la modale
+function displayMatchesInModal(matches) {
+    const matchesModalContent = document.getElementById('matchesModalContent');
     
-    matchesCount.textContent = `${matches.length} personne${matches.length > 1 ? 's' : ''}`;
-    
-    if (matches.length > 0) {
-        refreshBtn.style.display = 'block';
-    }
-    
-    matchPolylines.forEach(line => map.removeLayer(line));
-    matchPolylines = [];
+    // Sauvegarder les matches actuels
+    currentMatches = matches;
     
     if (matches.length === 0) {
-        matchesList.innerHTML = `
+        matchesModalContent.innerHTML = `
             <div class="no-matches">
-                <p>🔍 Recherche en cours...</p>
-                <p class="hint">D'autres personnes vont bientôt se connecter</p>
+                <p>🔍 Aucun match pour le moment</p>
+                <p class="hint">Créez un trajet pour trouver des compagnes</p>
             </div>
         `;
         return;
     }
     
-    matchesList.innerHTML = '';
+    matchesModalContent.innerHTML = '';
     
     matches.forEach(match => {
-        const card = document.createElement('div');
-        card.className = 'match-card';
+        const item = document.createElement('div');
+        item.className = 'match-item';
         
         const scoreColor = getScoreColor(match.similarity);
         
-        card.innerHTML = `
-            <div class="match-header">
-                <div class="match-user">👤 ${match.userName}</div>
-                <div class="match-score" style="color: ${scoreColor};">${match.similarity}%</div>
+        item.innerHTML = `
+            <div class="match-item-header">
+                <div class="match-item-name">👤 ${match.userName}</div>
+                <div class="match-item-score" style="color: ${scoreColor};">${match.similarity}%</div>
             </div>
-            <div class="match-details">
-                <div class="match-detail">
-                    <strong>📏 Distance</strong>
-                    ${(match.details.avgDistance / 1000).toFixed(2)} km
+            <div class="match-item-details">
+                <div class="match-item-detail">
+                    📏 <strong>${(match.details.avgDistance / 1000).toFixed(1)} km</strong>
                 </div>
-                <div class="match-detail">
-                    <strong>🔗 Chevauchement</strong>
-                    ${match.details.overlapPercentage}%
+                <div class="match-item-detail">
+                    🔗 <strong>${match.details.overlapPercentage}%</strong>
                 </div>
-                <div class="match-detail">
-                    <strong>🎯 Spatial</strong>
-                    ${match.details.spatialScore}%
+                <div class="match-item-detail">
+                    🎯 <strong>${match.details.spatialScore}%</strong>
                 </div>
-                <div class="match-detail">
-                    <strong>⏰ Temporel</strong>
-                    ${match.details.temporalScore}%
+                <div class="match-item-detail">
+                    ⏰ <strong>${match.details.temporalScore}%</strong>
                 </div>
-            </div>
-            <div class="match-trip-info">
-                <strong>Mode :</strong> ${getModeName(match.trip.mode)} | 
-                <strong>Départ :</strong> ${formatDateTime(match.trip.departureTime)}
             </div>
         `;
         
-        matchesList.appendChild(card);
+        // Cliquer sur un match pour ouvrir le chat
+        item.addEventListener('click', () => {
+            closeMatchesModal();
+            openChat(match.userId, match.userName);
+        });
+        
+        matchesModalContent.appendChild(item);
     });
+}
+
+// Ouvrir la modale des matches
+function openMatchesModal() {
+    document.getElementById('matchesModal').classList.add('active');
+}
+
+// Fermer la modale des matches
+function closeMatchesModal() {
+    document.getElementById('matchesModal').classList.remove('active');
 }
 
 // Couleur score
@@ -983,22 +987,29 @@ socket.on('users_count', (count) => {
     document.getElementById('usersCount').textContent = count;
 });
 
-socket.on('nearby_users', (data) => {
-    console.log('👭 Utilisateurs à proximité:', data.users);
-    displayNearbyUsers(data.users);
+socket.on('matches_update', (data) => {
+    console.log('🎯 Matches:', data.matches);
+    
+    // Afficher les matches sur la carte
+    displayMatchesOnMap(data.matches);
+    
+    // Afficher les matches dans la modale
+    displayMatchesInModal(data.matches);
+    
+    if (data.matches.length > 0) {
+        showNotification(`${data.matches.length} match${data.matches.length > 1 ? 'es' : ''} !`, 'success');
+    }
 });
 
 
 socket.on('new_user_joined', (data) => {
     console.log('👋 Nouveau:', data.userName);
     showNotification(`${data.userName} a rejoint !`, 'info');
-    requestNearbyUsers();
 });
 
 socket.on('user_left', (data) => {
     console.log('👋 Parti:', data.userName);
     showNotification(`${data.userName} est parti`, 'info');
-    requestNearbyUsers();
 });
 
 socket.on('receive_message', (data) => {
@@ -1049,9 +1060,6 @@ socket.on('trip_confirmed', (data) => {
     closeTripSheet();
     
     showNotification('Trajet enregistré !', 'success');
-    
-    // Demander les utilisateurs à proximité
-    requestNearbyUsers();
 });
 
 socket.on('error', (data) => {

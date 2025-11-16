@@ -28,9 +28,12 @@
             <div class="map-view">
                 <div id="nearbyMap"></div>
                 <div class="map-info">
-                    <span>👭 <span id="nearbyCount">0</span> femme(s) à proximité</span>
+                    <span>🎯 <span id="matchesMapCount">0</span> match(es)</span>
                     <span class="map-hint">Cliquez sur un marqueur pour discuter</span>
                 </div>
+                <button class="matches-toggle-btn" id="matchesToggleBtn">
+                    📋 Voir les matches
+                </button>
             </div>
 
             <!-- Bottom Navigation Bar -->
@@ -141,6 +144,22 @@
             <!-- Notifications -->
             <div id="notifications" class="notifications"></div>
             
+            <!-- Matches List Modal -->
+            <div id="matchesModal" class="matches-modal">
+                <div class="matches-modal-container">
+                    <div class="matches-modal-header">
+                        <h3>🎯 Vos Matches</h3>
+                        <button class="matches-close-btn" id="closeMatchesBtn">✕</button>
+                    </div>
+                    <div class="matches-modal-content" id="matchesModalContent">
+                        <div class="no-matches">
+                            <p>🔍 Aucun match pour le moment</p>
+                            <p class="hint">Créez un trajet pour trouver des compagnes</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Chat Modal -->
             <div id="chatModal" class="chat-modal">
                 <div class="chat-container">
