@@ -1266,6 +1266,73 @@ footer {
     background: #ff4d8a;
 }
 
+/* Safe Places */
+.safe-places-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.safe-place-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-radius: 12px;
+    border-left: 4px solid #00c9ff;
+    transition: all 0.3s;
+}
+
+.safe-place-item:active {
+    transform: scale(0.98);
+    background: linear-gradient(135deg, #e0f2fe 0%, #d0e9f5 100%);
+}
+
+.safe-place-emoji {
+    font-size: 2em;
+    min-width: 40px;
+    text-align: center;
+}
+
+.safe-place-info {
+    flex: 1;
+}
+
+.safe-place-name {
+    font-weight: 700;
+    color: var(--text-dark);
+    font-size: 0.95em;
+    margin-bottom: 4px;
+}
+
+.safe-place-type {
+    font-size: 0.8em;
+    color: var(--text-light);
+    text-transform: capitalize;
+}
+
+.safe-place-distance {
+    font-weight: 700;
+    color: #00c9ff;
+    font-size: 0.9em;
+    min-width: 60px;
+    text-align: right;
+}
+
+.loading-text {
+    text-align: center;
+    color: var(--text-light);
+    padding: 20px;
+    font-style: italic;
+}
+
+.error-text {
+    text-align: center;
+    color: var(--error);
+    padding: 20px;
+}
+
 /* Landscape mode */
 @media (orientation: landscape) and (max-height: 600px) {
     header {

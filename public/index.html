@@ -45,6 +45,10 @@
                     <span class="nav-icon">🚨</span>
                     <span class="nav-label">SOS</span>
                 </button>
+                <button class="nav-btn" id="safePlacesBtn">
+                    <span class="nav-icon">🔐</span>
+                    <span class="nav-label">Lieux sûrs</span>
+                </button>
                 <button class="nav-btn" id="settingsBtn">
                     <span class="nav-icon">⚙️</span>
                     <span class="nav-label">Paramètres</span>
@@ -88,6 +92,17 @@
                             💜 Trouver des compagnes
                         </button>
                     </form>
+                </div>
+            </div>
+
+            <!-- Safe Places Bottom Sheet -->
+            <div class="bottom-sheet" id="safePlacesSheet">
+                <div class="bottom-sheet-content">
+                    <div class="bottom-sheet-handle"></div>
+                    <h2 class="bottom-sheet-title">🔐 Lieux sûrs à proximité</h2>
+                    <div class="safe-places-list" id="safePlacesList">
+                        <p class="loading-text">Chargement des lieux sûrs...</p>
+                    </div>
                 </div>
             </div>
 

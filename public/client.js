@@ -22,6 +22,17 @@ let sosUserId = null;
 let sosMarker = null;
 let currentMatches = [];
 let emergencyContacts = [];
+let safePlaces = [];
+let safePlaceMarkers = new Map();
+
+// Safe places data - Locations in Paris with different types
+const SAFE_PLACES_DATA = [
+    { id: 1, name: "Café du Marais", type: "bar", lat: 48.8566, lng: 2.3622, emoji: "🍷" },
+    { id: 2, name: "Pharmacie Centrale", type: "pharmacy", lat: 48.8620, lng: 2.3480, emoji: "💊" },
+    { id: 3, name: "Boulangerie Ronde", type: "bakery", lat: 48.8500, lng: 2.3500, emoji: "🥐" },
+    { id: 4, name: "La Bistrot d'Amis", type: "restaurant", lat: 48.8700, lng: 2.3450, emoji: "🍽️" },
+    { id: 5, name: "Bar le Sunset", type: "bar", lat: 48.8580, lng: 2.3600, emoji: "🍸" }
+];
 
 // Initialisation de la carte Google Maps avec l'API native
 function initNearbyMap() {
@@ -114,6 +125,7 @@ function setupEventListeners() {
     // Bottom navbar
     document.getElementById('tripBtn').addEventListener('click', openTripSheet);
     document.getElementById('sosBtn').addEventListener('click', openSOSModal);
+    document.getElementById('safePlacesBtn').addEventListener('click', openSafePlacesSheet);
     document.getElementById('settingsBtn').addEventListener('click', openSettingsSheet);
     
     // Formulaire
@@ -177,6 +189,12 @@ function setupEventListeners() {
             closeSettingsSheet();
         }
     });
+
+    document.getElementById('safePlacesSheet').addEventListener('click', (e) => {
+        if (e.target.id === 'safePlacesSheet') {
+            closeSafePlacesSheet();
+        }
+    });
 }
 
 // Bottom Sheet Functions
@@ -194,6 +212,15 @@ function openSettingsSheet() {
 
 function closeSettingsSheet() {
     document.getElementById('settingsSheet').classList.remove('active');
+}
+
+function openSafePlacesSheet() {
+    document.getElementById('safePlacesSheet').classList.add('active');
+    displaySafePlaces();
+}
+
+function closeSafePlacesSheet() {
+    document.getElementById('safePlacesSheet').classList.remove('active');
 }
 
 // Settings Functions
@@ -673,6 +700,9 @@ function displayUserLocationOnMap(latitude, longitude) {
             title: 'Vous êtes ici'
         });
 
+        // Afficher les lieux sûrs sur la carte
+        displaySafePlacesOnMap();
+
         console.log('✅ Position affichée sur la carte');
     } catch (error) {
         console.error('❌ Erreur lors de l\'affichage de la position:', error);
@@ -913,6 +943,107 @@ function displayPolyline(polyline, color = '#667eea', weight = 4, opacity = 0.7)
     });
 
     return line;
+}
+
+// Afficher les lieux sûrs sur la carte
+function displaySafePlacesOnMap() {
+    // Effacer les anciens marqueurs de lieux sûrs
+    safePlaceMarkers.forEach(marker => marker.setMap(null));
+    safePlaceMarkers.clear();
+
+    if (!nearbyMap || !currentUserPosition) {
+        return;
+    }
+
+    SAFE_PLACES_DATA.forEach(place => {
+        // Créer un marqueur personnalisé pour chaque lieu sûr
+        const marker = new google.maps.Marker({
+            position: { lat: place.lat, lng: place.lng },
+            map: nearbyMap,
+            title: `${place.emoji} ${place.name}`,
+            icon: {
+                path: google.maps.SymbolPath.CIRCLE,
+                scale: 8,
+                fillColor: '#00c9ff',
+                fillOpacity: 0.8,
+                strokeColor: '#ffffff',
+                strokeWeight: 2
+            }
+        });
+
+        // Ajouter un listener pour afficher les infos
+        marker.addListener('click', () => {
+            const distance = calculateDistance(
+                currentUserPosition.lat,
+                currentUserPosition.lng,
+                place.lat,
+                place.lng
+            );
+            const infoWindow = new google.maps.InfoWindow({
+                content: `<div style="padding: 8px; font-size: 12px;">
+                    <strong>${place.emoji} ${place.name}</strong><br/>
+                    Type: ${place.type}<br/>
+                    Distance: ${distance.toFixed(1)}m
+                </div>`
+            });
+            infoWindow.open(nearbyMap, marker);
+        });
+
+        safePlaceMarkers.set(place.id, marker);
+    });
+}
+
+// Calculer la distance entre deux points (Haversine)
+function calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Rayon de la Terre en mètres
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+              Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+              Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    return R * c;
+}
+
+// Afficher la liste des lieux sûrs triés par distance
+function displaySafePlaces() {
+    const listContainer = document.getElementById('safePlacesList');
+
+    if (!currentUserPosition) {
+        listContainer.innerHTML = '<p class="error-text">Position non disponible</p>';
+        return;
+    }
+
+    // Calculer la distance pour chaque lieu sûr
+    const placesWithDistance = SAFE_PLACES_DATA.map(place => ({
+        ...place,
+        distance: calculateDistance(
+            currentUserPosition.lat,
+            currentUserPosition.lng,
+            place.lat,
+            place.lng
+        )
+    }));
+
+    // Trier par distance
+    placesWithDistance.sort((a, b) => a.distance - b.distance);
+
+    // Générer le HTML
+    if (placesWithDistance.length === 0) {
+        listContainer.innerHTML = '<p class="error-text">Aucun lieu sûr trouvé</p>';
+        return;
+    }
+
+    listContainer.innerHTML = placesWithDistance.map(place => `
+        <div class="safe-place-item">
+            <div class="safe-place-emoji">${place.emoji}</div>
+            <div class="safe-place-info">
+                <div class="safe-place-name">${place.name}</div>
+                <div class="safe-place-type">${place.type}</div>
+            </div>
+            <div class="safe-place-distance">${place.distance < 1000 ? Math.round(place.distance) + 'm' : (place.distance / 1000).toFixed(1) + 'km'}</div>
+        </div>
+    `).join('');
 }
 
 // Afficher marqueurs
