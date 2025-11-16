@@ -1167,13 +1167,21 @@ socket.on('users_count', (count) => {
 
 socket.on('matches_update', (data) => {
     console.log('🎯 Matches:', data.matches);
-    
-    // Afficher les matches sur la carte
+
+    // Afficher ton trajet personnel en bleu/cyan (EN DESSOUS des matches)
+    if (currentTrip && currentTrip.polyline && currentTrip.polyline.length > 0) {
+        if (userPolyline) {
+            userPolyline.setMap(null);
+        }
+        userPolyline = displayPolyline(currentTrip.polyline, '#0084ff', 5, 0.8);
+    }
+
+    // Afficher les matches sur la carte (par-dessus ton trajet)
     displayMatchesOnMap(data.matches);
-    
+
     // Afficher les matches dans la modale
     displayMatchesInModal(data.matches);
-    
+
     if (data.matches.length > 0) {
         showNotification(`${data.matches.length} match${data.matches.length > 1 ? 'es' : ''} !`, 'success');
     }
@@ -1227,16 +1235,34 @@ socket.on('sos_alert', (data) => {
 
 socket.on('trip_confirmed', (data) => {
     console.log('✅ Trajet confirmé', data);
-    
+
     currentTrip = data.trip;
-    
+
     const submitBtn = document.getElementById('submitBtn');
     submitBtn.disabled = false;
     submitBtn.innerHTML = '💜 Trouver des compagnes';
-    
+
+    // Afficher ton trajet personnel sur la carte (en bleu/cyan)
+    if (currentTrip && currentTrip.polyline && currentTrip.polyline.length > 0) {
+        console.log('🗺️ Affichage de ton itinéraire personnel sur la carte');
+        if (userPolyline) {
+            userPolyline.setMap(null);
+        }
+        userPolyline = displayPolyline(currentTrip.polyline, '#0084ff', 5, 0.8);
+
+        // Centrer la carte sur ton trajet
+        if (nearbyMap && currentTrip.polyline.length > 0) {
+            const bounds = new google.maps.LatLngBounds();
+            currentTrip.polyline.forEach(point => {
+                bounds.extend({ lat: point[0], lng: point[1] });
+            });
+            nearbyMap.fitBounds(bounds, { padding: 100 });
+        }
+    }
+
     // Fermer le bottom sheet
     closeTripSheet();
-    
+
     showNotification('Trajet enregistré !', 'success');
 });
 
