@@ -3,6 +3,7 @@ const socket = io();
 
 // Variables globales
 let map;
+let map3;
 let nearbyMap;
 let userPolyline;
 let matchPolylines = [];
