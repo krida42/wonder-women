@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Maps MVP - Matching de Trajets</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🗺️ Maps MVP</h1>
+            <p class="subtitle">Matching de trajets en temps réel</p>
+            <div class="status-bar">
+                <span class="status-indicator" id="connectionStatus">
+                    <span class="dot"></span>
+                    Connexion...
+                </span>
+                <span class="users-count">
+                    👥 <span id="usersCount">0</span> utilisateur(s) connecté(s)
+                </span>
+            </div>
+        </header>
+
+        <main>
+            <!-- Formulaire de trajet -->
+            <section class="trip-form-section">
+                <h2>📍 Votre trajet</h2>
+                <form id="tripForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="userName">Nom (optionnel)</label>
+                            <input type="text" id="userName" placeholder="Votre nom">
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="origin">📍 Adresse d'origine</label>
+                            <div class="input-with-button">
+                                <input type="text" id="origin" placeholder="Ex: Tour Eiffel, Paris" required>
+                                <button type="button" class="btn-location" id="useLocationBtn" title="Utiliser ma position actuelle">
+                                    📍
+                                </button>
+                            </div>
+                            <small class="hint-text">Entrez une adresse ou utilisez votre position actuelle</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="destination">🎯 Adresse de destination</label>
+                            <input type="text" id="destination" placeholder="Ex: Musée du Louvre, Paris" required>
+                            <small class="hint-text">Entrez une adresse complète</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="mode">Mode de transport</label>
+                            <select id="mode">
+                                <option value="transit">Transit + Marche</option>
+                                <option value="driving">Voiture</option>
+                                <option value="walking">Marche</option>
+                                <option value="bicycling">Vélo</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="departureTime">Heure de départ</label>
+                            <input type="datetime-local" id="departureTime" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn-primary" id="submitBtn">
+                        🔍 Trouver des matches
+                    </button>
+                </form>
+
+                <!-- Exemples de trajets -->
+                <div class="examples">
+                    <p><strong>Exemples de trajets à Paris :</strong></p>
+                    <button class="btn-example" onclick="fillExample1()">Tour Eiffel → Musée du Louvre</button>
+                    <button class="btn-example" onclick="fillExample2()">Gare du Nord → Gare Montparnasse</button>
+                    <button class="btn-example" onclick="fillExample3()">Place de la République → Place de la Bastille</button>
+                </div>
+            </section>
+
+            <!-- Informations du trajet -->
+            <section class="trip-info-section" id="tripInfoSection" style="display: none;">
+                <h2>✅ Votre trajet</h2>
+                <div class="trip-info" id="tripInfo"></div>
+            </section>
+
+            <!-- Carte -->
+            <section class="map-section">
+                <h2>🗺️ Visualisation</h2>
+                <div id="map"></div>
+            </section>
+
+            <!-- Liste des matches -->
+            <section class="matches-section">
+                <h2>🎯 Matches trouvés</h2>
+                <div class="matches-header">
+                    <span id="matchesCount">0 match trouvé</span>
+                    <button class="btn-refresh" id="refreshBtn" style="display: none;">
+                        🔄 Actualiser
+                    </button>
+                </div>
+                <div id="matchesList" class="matches-list">
+                    <div class="no-matches">
+                        <p>Aucun match pour le moment.</p>
+                        <p class="hint">Attendez que d'autres utilisateurs se connectent ou ajustez votre trajet.</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Notifications -->
+            <div id="notifications" class="notifications"></div>
+        </main>
+
+        <footer>
+            <p>Maps MVP - Matching de trajets en temps réel avec Socket.io</p>
+        </footer>
+    </div>
+
+    <script src="https://cdn.socket.io/4.6.0/socket.io.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="client.js"></script>
+</body>
+</html>
