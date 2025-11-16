@@ -195,6 +195,9 @@ function setupEventListeners() {
             closeSafePlacesSheet();
         }
     });
+
+    // Close button for safe places
+    document.getElementById('closeSafePlacesBtn').addEventListener('click', closeSafePlacesSheet);
 }
 
 // Bottom Sheet Functions

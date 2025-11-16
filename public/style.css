@@ -290,6 +290,31 @@ main {
     margin: 0 auto 20px;
 }
 
+.bottom-sheet-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.safe-places-close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5em;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 4px 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: color 0.3s, transform 0.2s;
+}
+
+.safe-places-close-btn:active {
+    transform: scale(1.2);
+    color: var(--error);
+}
+
 .bottom-sheet-title {
     font-size: 1.3em;
     color: var(--secondary);
