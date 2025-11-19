@@ -182,7 +182,7 @@ main {
 
 .matches-toggle-btn {
     position: absolute;
-    bottom: 130px;
+    bottom: 160px;
     right: 20px;
     background: linear-gradient(135deg, rgba(209, 24, 108, 0.75) 0%, rgba(233, 30, 140, 0.75) 100%);
     backdrop-filter: blur(30px) saturate(180%);
