@@ -171,7 +171,11 @@ const SAFE_PLACES_DATA = [
     { id: 12, name: "Hôpital Saint-Louis", type: "hopital", lat: 48.8720, lng: 2.3640, emoji: "🏥" },
     { id: 13, name: "Commissariat 4e Arrondissement", type: "police", lat: 48.8550, lng: 2.3550, emoji: "🚔" },
     { id: 14, name: "Pharmacie Rivoli", type: "pharmacie", lat: 48.8620, lng: 2.3450, emoji: "💊" },
-    { id: 15, name: "Bistro des Vosges", type: "bar", lat: 48.8610, lng: 2.3700, emoji: "🍷" }
+    { id: 15, name: "Bistro des Vosges", type: "bar", lat: 48.8610, lng: 2.3700, emoji: "🍷" },
+    { id: 16, name: "Métro Guy Moquet", type: "transport", lat: 48.8864, lng: 2.3407, emoji: "🚇" },
+    { id: 17, name: "Café Opéra - 9e Arrondissement", type: "bar", lat: 48.8730, lng: 2.3410, emoji: "☕" },
+    { id: 18, name: "Café Parc Monceau", type: "bar", lat: 48.8807, lng: 2.3015, emoji: "☕" },
+    { id: 19, name: "Brasserie Avenue de Clichy", type: "restaurant", lat: 48.8861, lng: 2.3260, emoji: "🍽️" }
 ];
 
 // Initialisation de la carte Google Maps avec l'API native
