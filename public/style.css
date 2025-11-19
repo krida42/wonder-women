@@ -127,13 +127,16 @@ main {
     flex: 1;
     position: relative;
     overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Map View - Full Screen */
 .map-view {
     width: 100%;
-    height: calc(100vh - 120px - 70px); /* header + navbar */
+    flex: 1;
     position: relative;
+    overflow: hidden;
 }
 
 #nearbyMap {
@@ -170,7 +173,7 @@ main {
 
 .matches-toggle-btn {
     position: absolute;
-    bottom: 20px;
+    bottom: 75px;
     right: 20px;
     background: linear-gradient(135deg, #ff6b9d 0%, #c06c84 100%);
     color: white;
@@ -199,10 +202,11 @@ main {
     display: flex;
     justify-content: space-around;
     align-items: center;
-    padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+    padding: 0;
     box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.1);
     z-index: 1000;
-    height: 70px;
+    height: 60px;
+    border-top: 1px solid #f0f0f0;
 }
 
 .nav-btn {

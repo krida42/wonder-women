@@ -53,7 +53,11 @@ function initNearbyMap() {
         nearbyMap = new google.maps.Map(nearbyMapElement, {
             zoom: 13,
             center: { lat: 48.8566, lng: 2.3522 },
-            mapTypeId: 'roadmap'
+            mapTypeId: 'roadmap',
+            gestureHandling: 'greedy',
+            scrollwheel: true,
+            draggableCursor: 'grab',
+            draggingCursor: 'grabbing'
         });
 
         console.log('✅ Google Maps initialisée sur la carte de proximité');
@@ -79,7 +83,11 @@ function initMap() {
         map = new google.maps.Map(mapElement, {
             zoom: 12,
             center: { lat: 48.8566, lng: 2.3522 },
-            mapTypeId: 'roadmap'
+            mapTypeId: 'roadmap',
+            gestureHandling: 'greedy',
+            scrollwheel: true,
+            draggableCursor: 'grab',
+            draggingCursor: 'grabbing'
         });
 
         console.log('✅ Google Maps chargée sur la carte principale');
