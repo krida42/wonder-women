@@ -182,7 +182,7 @@ main {
 
 .matches-toggle-btn {
     position: absolute;
-    bottom: 100px;
+    bottom: 130px;
     right: 20px;
     background: linear-gradient(135deg, rgba(209, 24, 108, 0.75) 0%, rgba(233, 30, 140, 0.75) 100%);
     backdrop-filter: blur(30px) saturate(180%);
@@ -218,7 +218,7 @@ main {
     justify-content: space-around;
     align-items: center;
     padding: 0;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
     z-index: 1000;
     height: 60px;
 }
