@@ -184,17 +184,17 @@ main {
     position: absolute;
     bottom: 100px;
     right: 20px;
-    background: rgba(255, 255, 255, 0.35);
+    background: linear-gradient(135deg, rgba(209, 24, 108, 0.75) 0%, rgba(233, 30, 140, 0.75) 100%);
     backdrop-filter: blur(30px) saturate(180%);
     -webkit-backdrop-filter: blur(30px) saturate(180%);
-    border: 1.5px solid rgba(255, 255, 255, 0.2);
-    color: var(--text-dark);
+    border: 1.5px solid rgba(209, 24, 108, 0.2);
+    color: white;
     padding: 12px 20px;
     border-radius: 25px;
     font-size: 0.9em;
     font-weight: 600;
     cursor: pointer;
-    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.12), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+    box-shadow: 0 8px 32px rgba(209, 24, 108, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.2);
     transition: all 0.3s;
     z-index: 500;
 }
@@ -1566,4 +1566,65 @@ footer {
 
 .action-btn:active {
     transform: scale(0.98);
+}
+
+/* Safe Place Popup */
+.safe-place-popup {
+    position: fixed;
+    background: white;
+    border-radius: 12px;
+    padding: 12px 16px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+    z-index: 2000;
+    max-width: 200px;
+    animation: popupSlideIn 0.3s ease-out;
+    pointer-events: auto;
+}
+
+@keyframes popupSlideIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.safe-place-popup-arrow {
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 8px solid transparent;
+    border-right: 8px solid transparent;
+    border-top: 8px solid white;
+    filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.1));
+}
+
+.safe-place-popup-content {
+    text-align: center;
+}
+
+.safe-place-popup-name {
+    font-weight: 700;
+    font-size: 0.95em;
+    color: var(--text-dark);
+    margin-bottom: 4px;
+}
+
+.safe-place-popup-type {
+    font-size: 0.8em;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    text-transform: capitalize;
+}
+
+.safe-place-popup-distance {
+    font-size: 0.85em;
+    color: var(--primary);
+    font-weight: 600;
 }

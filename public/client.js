@@ -161,7 +161,17 @@ const SAFE_PLACES_DATA = [
     { id: 2, name: "Pharmacie Centrale", type: "pharmacie", lat: 48.8585, lng: 2.3510, emoji: "💊" },
     { id: 3, name: "Boulangerie Ronde", type: "boulangerie", lat: 48.8555, lng: 2.3480, emoji: "🥐" },
     { id: 4, name: "La Bistrot d'Amis", type: "restaurant", lat: 48.8620, lng: 2.3520, emoji: "🍽️" },
-    { id: 5, name: "Bar le Sunset", type: "bar", lat: 48.8575, lng: 2.3600, emoji: "🍸" }
+    { id: 5, name: "Bar le Sunset", type: "bar", lat: 48.8575, lng: 2.3600, emoji: "🍸" },
+    { id: 6, name: "Police Île-de-France", type: "police", lat: 48.8610, lng: 2.3560, emoji: "🚔" },
+    { id: 7, name: "Pharmacie Saint-Paul", type: "pharmacie", lat: 48.8570, lng: 2.3650, emoji: "💊" },
+    { id: 8, name: "Restaurant Le Petit Pont", type: "restaurant", lat: 48.8530, lng: 2.3490, emoji: "🍽️" },
+    { id: 9, name: "Café Lumière", type: "bar", lat: 48.8650, lng: 2.3600, emoji: "☕" },
+    { id: 10, name: "Boulangerie du Centre", type: "boulangerie", lat: 48.8610, lng: 2.3480, emoji: "🥐" },
+    { id: 11, name: "Station RATP Notre-Dame", type: "transport", lat: 48.8530, lng: 2.3500, emoji: "🚇" },
+    { id: 12, name: "Hôpital Saint-Louis", type: "hopital", lat: 48.8720, lng: 2.3640, emoji: "🏥" },
+    { id: 13, name: "Commissariat 4e Arrondissement", type: "police", lat: 48.8550, lng: 2.3550, emoji: "🚔" },
+    { id: 14, name: "Pharmacie Rivoli", type: "pharmacie", lat: 48.8620, lng: 2.3450, emoji: "💊" },
+    { id: 15, name: "Bistro des Vosges", type: "bar", lat: 48.8610, lng: 2.3700, emoji: "🍷" }
 ];
 
 // Initialisation de la carte Google Maps avec l'API native
@@ -1255,12 +1265,91 @@ function displaySafePlacesOnMap() {
             } else {
                 distanceText = (distance / 1000).toFixed(1) + ' KM';
             }
-            // Afficher les détails dans un bottom sheet
+            // Afficher un popup au-dessus de l'icône
+            displaySafePlacePopup(marker, place, typeTranslated, distanceText);
+            // Afficher aussi les détails dans un bottom sheet
             displaySafePlaceDetails(place, typeTranslated, distanceText);
         });
 
         safePlaceMarkers.set(place.id, marker);
     });
+}
+
+// Afficher un popup au-dessus de l'icône du lieu sûr
+function displaySafePlacePopup(marker, place, typeTranslated, distanceText) {
+    // Fermer les anciens popups
+    const oldPopups = document.querySelectorAll('.safe-place-popup');
+    oldPopups.forEach(popup => popup.remove());
+
+    // Créer le popup
+    const popup = document.createElement('div');
+    popup.className = 'safe-place-popup';
+    popup.innerHTML = `
+        <div class="safe-place-popup-arrow"></div>
+        <div class="safe-place-popup-content">
+            <div class="safe-place-popup-name">${place.name}</div>
+            <div class="safe-place-popup-type">${typeTranslated}</div>
+            <div class="safe-place-popup-distance">📍 ${distanceText}</div>
+        </div>
+    `;
+
+    // Ajouter le popup au body
+    document.body.appendChild(popup);
+
+    console.log('✅ Popup créé pour:', place.name);
+
+    // Créer une classe pour la projection
+    class PopupOverlay extends google.maps.OverlayView {
+        constructor() {
+            super();
+        }
+
+        onAdd() {
+            console.log('🗺️ OverlayView ajouté, calcul de la position...');
+            const projection = this.getProjection();
+            const pos = projection.fromLatLngToContainerPixel(marker.getPosition());
+
+            if (pos) {
+                const popupWidth = popup.offsetWidth || 200;
+                const popupHeight = popup.offsetHeight || 80;
+                // Positionner au-dessus du marqueur (avec un peu de décalage)
+                popup.style.left = (pos.x - popupWidth / 2) + 'px';
+                popup.style.top = (pos.y - popupHeight - 20) + 'px';
+                console.log('📍 Position calculée:', pos.x, pos.y);
+            } else {
+                console.warn('⚠️ Position non calculée, utilisation de la position par défaut');
+                popup.style.left = '50%';
+                popup.style.top = '50%';
+                popup.style.transform = 'translate(-50%, -50%)';
+            }
+        }
+
+        draw() {}
+
+        onRemove() {}
+    }
+
+    // Ajouter l'overlay à la carte pour accéder à la projection
+    const overlay = new PopupOverlay();
+    overlay.setMap(nearbyMap);
+
+    // Attendre un peu puis retirer l'overlay car on n'en a besoin que pour calculer la position
+    setTimeout(() => {
+        overlay.setMap(null);
+    }, 100);
+
+    // Fermer le popup quand on clique ailleurs
+    const closePopup = (e) => {
+        if (!popup.contains(e.target)) {
+            console.log('🔒 Fermeture du popup');
+            popup.remove();
+            document.removeEventListener('click', closePopup);
+        }
+    };
+
+    setTimeout(() => {
+        document.addEventListener('click', closePopup);
+    }, 100);
 }
 
 // Calculer la distance entre deux points (Haversine)
