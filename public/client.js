@@ -1435,15 +1435,13 @@ function displaySafePlaces() {
             <div class="safe-place-distance">${distanceText}</div>
         `;
 
-        // Ajouter un écouteur de clic pour afficher la safe place sur la carte et ses détails
+        // Ajouter un écouteur de clic pour afficher la safe place sur la carte
         itemDiv.addEventListener('click', () => {
             // Centrer la carte sur le lieu sûr
             if (nearbyMap) {
                 nearbyMap.setCenter({ lat: place.lat, lng: place.lng });
                 nearbyMap.setZoom(16);
             }
-            // Afficher les détails du lieu
-            displaySafePlaceDetails(place, typeTranslated, distanceText);
         });
 
         // Ajouter un curseur pointeur
