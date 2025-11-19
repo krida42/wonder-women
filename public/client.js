@@ -1,6 +1,136 @@
 // Connexion Socket.io
 const socket = io();
 
+// Classe personnalisée pour les cercles avec taille fixe en pixels
+class FixedSizeCircle {
+    constructor(options) {
+        this.center = options.center;
+        this.radiusPixels = options.radiusPixels || 20; // Rayon en pixels
+        this.fillColor = options.fillColor || '#ff1493';
+        this.fillOpacity = options.fillOpacity || 0.7;
+        this.strokeColor = options.strokeColor || '#ff1493';
+        this.strokeWeight = options.strokeWeight || 2;
+        this.strokeOpacity = options.strokeOpacity || 0.9;
+        this.title = options.title || '';
+        this.map = options.map;
+        this.overlay = null;
+        this.listeners = [];
+
+        if (this.map) {
+            this.setMap(this.map);
+        }
+    }
+
+    setMap(map) {
+        this.map = map;
+
+        if (this.overlay) {
+            this.overlay.setMap(null);
+        }
+
+        if (!map) return;
+
+        // Créer l'overlay personnalisé
+        this.overlay = new google.maps.OverlayView();
+        const self = this;
+
+        this.overlay.onAdd = function() {
+            // Conteneur principal
+            const container = document.createElement('div');
+            container.style.position = 'absolute';
+            container.style.width = (self.radiusPixels * 2 + 20) + 'px';
+            container.style.height = (self.radiusPixels * 2 + 20) + 'px';
+            container.style.pointerEvents = 'none';
+
+            // Halo de dégradé
+            const halo = document.createElement('div');
+            halo.style.position = 'absolute';
+            halo.style.width = '100%';
+            halo.style.height = '100%';
+            halo.style.borderRadius = '50%';
+            halo.style.background = `radial-gradient(circle, ${self.fillColor}33 0%, ${self.fillColor}11 70%, transparent 100%)`;
+            container.appendChild(halo);
+
+            // Cercle intérieur
+            const layer = document.createElement('div');
+            layer.style.position = 'absolute';
+            layer.style.width = (self.radiusPixels * 2) + 'px';
+            layer.style.height = (self.radiusPixels * 2) + 'px';
+            layer.style.borderRadius = '50%';
+            layer.style.backgroundColor = self.fillColor;
+            layer.style.opacity = self.fillOpacity;
+            layer.style.border = self.strokeWeight + 'px solid ' + self.strokeColor;
+            layer.style.borderOpacity = self.strokeOpacity;
+            layer.style.left = '10px';
+            layer.style.top = '10px';
+            layer.style.cursor = 'pointer';
+            layer.style.zIndex = '10';
+            layer.title = self.title;
+
+            // Ajouter les événements au cercle intérieur
+            layer.addEventListener('click', function(e) {
+                if (self.clickListener) {
+                    self.clickListener(e);
+                }
+            });
+
+            container.appendChild(layer);
+            self.layer = layer;
+            self.container = container;
+            this.getPanes().overlayLayer.appendChild(container);
+        };
+
+        this.overlay.draw = function() {
+            if (!self.container || !self.center) return;
+
+            const projection = this.getProjection();
+            const pos = projection.fromLatLngToDivPixel(self.center);
+
+            self.container.style.left = (pos.x - self.radiusPixels - 10) + 'px';
+            self.container.style.top = (pos.y - self.radiusPixels - 10) + 'px';
+        };
+
+        this.overlay.onRemove = function() {
+            if (self.container && self.container.parentNode) {
+                self.container.parentNode.removeChild(self.container);
+            }
+            self.layer = null;
+            self.container = null;
+        };
+
+        this.overlay.setMap(map);
+    }
+
+    setCenter(center) {
+        this.center = center;
+        if (this.overlay) {
+            this.overlay.draw();
+        }
+    }
+
+    getCenter() {
+        return this.center;
+    }
+
+    setRadius(radiusPixels) {
+        this.radiusPixels = radiusPixels;
+        if (this.layer) {
+            this.layer.style.width = (radiusPixels * 2) + 'px';
+            this.layer.style.height = (radiusPixels * 2) + 'px';
+            if (this.overlay) {
+                this.overlay.draw();
+            }
+        }
+    }
+
+    addListener(eventName, callback) {
+        if (this.layer) {
+            this.layer.addEventListener(eventName, callback);
+            this.listeners.push({ event: eventName, callback });
+        }
+    }
+}
+
 // Variables globales
 let map;
 let nearbyMap;
@@ -57,7 +187,109 @@ function initNearbyMap() {
             gestureHandling: 'greedy',
             scrollwheel: true,
             draggableCursor: 'grab',
-            draggingCursor: 'grabbing'
+            draggingCursor: 'grabbing',
+            disableDefaultUI: true,
+            zoomControl: false,
+            mapTypeControl: false,
+            scaleControl: false,
+            fullscreenControl: false,
+            streetViewControl: false,
+            styles: [
+              {
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#f5f5f5"}
+                ]
+              },
+              {
+                "elementType": "labels.icon",
+                "stylers": [
+                  {"visibility": "off"}
+                ]
+              },
+              {
+                "elementType": "labels.text.fill",
+                "stylers": [
+                  {"color": "#616161"}
+                ]
+              },
+              {
+                "elementType": "labels.text.stroke",
+                "stylers": [
+                  {"color": "#f5f5f5"}
+                ]
+              },
+              {
+                "featureType": "administrative",
+                "elementType": "geometry.stroke",
+                "stylers": [
+                  {"color": "#bdbdbd"}
+                ]
+              },
+              {
+                "featureType": "landscape",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#eeeeee"}
+                ]
+              },
+              {
+                "featureType": "poi",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#eeeeee"}
+                ]
+              },
+              {
+                "featureType": "poi.park",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#c8e6c9"}
+                ]
+              },
+              {
+                "featureType": "road",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#ffffff"}
+                ]
+              },
+              {
+                "featureType": "road.arterial",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#f5f5f5"}
+                ]
+              },
+              {
+                "featureType": "road.highway",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#f0e3e3"}
+                ]
+              },
+              {
+                "featureType": "road.highway",
+                "elementType": "geometry.stroke",
+                "stylers": [
+                  {"color": "#e5998c"}
+                ]
+              },
+              {
+                "featureType": "transit",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#f0f0f0"}
+                ]
+              },
+              {
+                "featureType": "water",
+                "elementType": "geometry",
+                "stylers": [
+                  {"color": "#b3e5fc"}
+                ]
+              }
+            ]
         });
 
         console.log('✅ Google Maps initialisée sur la carte de proximité');
@@ -87,7 +319,13 @@ function initMap() {
             gestureHandling: 'greedy',
             scrollwheel: true,
             draggableCursor: 'grab',
-            draggingCursor: 'grabbing'
+            draggingCursor: 'grabbing',
+            disableDefaultUI: true,
+            zoomControl: false,
+            mapTypeControl: false,
+            scaleControl: false,
+            fullscreenControl: false,
+            streetViewControl: false
         });
 
         console.log('✅ Google Maps chargée sur la carte principale');
@@ -180,7 +418,8 @@ function setupEventListeners() {
     document.getElementById('matchesToggleBtn').addEventListener('click', openMatchesModal);
     document.getElementById('closeMatchesBtn').addEventListener('click', closeMatchesModal);
     document.getElementById('matchesModal').addEventListener('click', (e) => {
-        if (e.target.id === 'matchesModal') {
+        // Fermer si on clique sur le fond (pas sur le conteneur)
+        if (e.currentTarget === e.target || e.target.id === 'matchesModal') {
             closeMatchesModal();
         }
     });
@@ -191,7 +430,7 @@ function setupEventListeners() {
             closeTripSheet();
         }
     });
-    
+
     document.getElementById('settingsSheet').addEventListener('click', (e) => {
         if (e.target.id === 'settingsSheet') {
             closeSettingsSheet();
@@ -204,8 +443,28 @@ function setupEventListeners() {
         }
     });
 
-    // Close button for safe places
-    document.getElementById('closeSafePlacesBtn').addEventListener('click', closeSafePlacesSheet);
+
+    // Close bottom sheets by clicking on the top overlay area
+    document.addEventListener('click', (e) => {
+        const tripSheet = document.getElementById('tripSheet');
+        const settingsSheet = document.getElementById('settingsSheet');
+        const safePlacesSheet = document.getElementById('safePlacesSheet');
+        const navBar = document.querySelector('.bottom-navbar');
+
+        // Don't close if clicking on nav buttons or inside an open sheet
+        if (navBar.contains(e.target)) {
+            return;
+        }
+
+        // Check if click is on the overlay (pseudo-element) of an active bottom sheet
+        if (tripSheet.classList.contains('active') && !tripSheet.contains(e.target)) {
+            closeTripSheet();
+        } else if (settingsSheet.classList.contains('active') && !settingsSheet.contains(e.target)) {
+            closeSettingsSheet();
+        } else if (safePlacesSheet.classList.contains('active') && !safePlacesSheet.contains(e.target)) {
+            closeSafePlacesSheet();
+        }
+    });
 }
 
 // Bottom Sheet Functions
@@ -388,13 +647,13 @@ function helpSOSUser() {
         
         const sosIcon = L.divIcon({
             className: 'sos-marker',
-            html: '🚨',
-            iconSize: [50, 50]
+            html: '<img src="/sos.png" style="width: 32px; height: 32px; filter: drop-shadow(0 2px 5px rgba(0,0,0,0.3));">',
+            iconSize: [32, 32]
         });
         
         sosMarker = L.marker(latLng, { icon: sosIcon })
             .addTo(nearbyMap)
-            .bindPopup('<b>🚨 URGENCE</b><br>Cette personne a besoin d\'aide!')
+            .bindPopup('<b><img src="/sos.png" style="width: 20px; height: 20px; vertical-align: middle; margin-right: 4px;"> URGENCE</b><br>Cette personne a besoin d\'aide!')
             .openPopup();
         
         // Créer un itinéraire si on a notre position
@@ -698,10 +957,10 @@ function displayUserLocationOnMap(latitude, longitude) {
             myMarker.setMap(null);
         }
 
-        // Créer un cercle rose (magenta) pour la position actuelle
-        myMarker = new google.maps.Circle({
+        // Créer un cercle rose (magenta) pour la position actuelle avec taille fixe
+        myMarker = new FixedSizeCircle({
             center: { lat: latitude, lng: longitude },
-            radius: 30, // 30 mètres
+            radiusPixels: 14, // 14 pixels - taille fixe à l'écran
             map: nearbyMap,
             fillColor: '#ff1493',
             fillOpacity: 0.7,
@@ -912,21 +1171,20 @@ function displayMatchesOnMap(matches) {
             const lat = firstPoint[0];
             const lng = firstPoint[1];
 
-            // Créer un cercle rouge pour représenter la position du match
-            const circle = new google.maps.Circle({
+            // Créer un cercle rouge pour représenter la position du match avec taille fixe
+            const circle = new FixedSizeCircle({
                 center: { lat: lat, lng: lng },
-                radius: 30, // 30 mètres (même taille que l'utilisateur)
+                radiusPixels: 14, // 14 pixels - taille fixe à l'écran
                 map: nearbyMap,
                 fillColor: '#ff0000',
                 fillOpacity: 0.7,
                 strokeColor: '#ff0000',
                 strokeWeight: 2,
                 strokeOpacity: 0.9,
-                title: `${match.userName} - ${match.similarity}%`,
-                cursor: 'pointer'
+                title: `${match.userName} - ${match.similarity}%`
             });
 
-            // Ajouter un popup au clic
+            // Ajouter un écouteur de clic
             circle.addListener('click', () => {
                 openChat(match.userId, match.userName);
             });
@@ -967,22 +1225,20 @@ function displaySafePlacesOnMap() {
     }
 
     SAFE_PLACES_DATA.forEach(place => {
-        // Créer un marqueur personnalisé pour chaque lieu sûr
+        // Créer un marqueur personnalisé pour chaque lieu sûr avec l'image safe.png
         const marker = new google.maps.Marker({
             position: { lat: place.lat, lng: place.lng },
             map: nearbyMap,
-            title: `${place.emoji} ${place.name}`,
+            title: `${place.name}`,
             icon: {
-                path: google.maps.SymbolPath.CIRCLE,
-                scale: 8,
-                fillColor: '#00c9ff',
-                fillOpacity: 0.8,
-                strokeColor: '#ffffff',
-                strokeWeight: 2
+                url: '/safe.png',
+                scaledSize: new google.maps.Size(28, 28),
+                origin: new google.maps.Point(0, 0),
+                anchor: new google.maps.Point(14, 14)
             }
         });
 
-        // Ajouter un listener pour afficher les infos
+        // Ajouter un listener pour afficher les infos du lieu
         marker.addListener('click', () => {
             const distance = calculateDistance(
                 currentUserPosition.lat,
@@ -999,14 +1255,8 @@ function displaySafePlacesOnMap() {
             } else {
                 distanceText = (distance / 1000).toFixed(1) + ' KM';
             }
-            const infoWindow = new google.maps.InfoWindow({
-                content: `<div style="padding: 8px; font-size: 12px;">
-                    <strong>${place.emoji} ${place.name}</strong><br/>
-                    Type: ${typeTranslated}<br/>
-                    Distance: ${distanceText}
-                </div>`
-            });
-            infoWindow.open(nearbyMap, marker);
+            // Afficher les détails dans un bottom sheet
+            displaySafePlaceDetails(place, typeTranslated, distanceText);
         });
 
         safePlaceMarkers.set(place.id, marker);
@@ -1068,7 +1318,9 @@ function displaySafePlaces() {
         return;
     }
 
-    listContainer.innerHTML = placesWithDistance.map(place => {
+    listContainer.innerHTML = '';
+
+    placesWithDistance.forEach(place => {
         const typeTranslated = getTypeTranslation(place.type);
         let distanceText;
         if (isNaN(place.distance) || place.distance === undefined) {
@@ -1078,17 +1330,80 @@ function displaySafePlaces() {
         } else {
             distanceText = (place.distance / 1000).toFixed(1) + ' KM';
         }
-        return `
-        <div class="safe-place-item">
-            <div class="safe-place-emoji">${place.emoji}</div>
+
+        const itemDiv = document.createElement('div');
+        itemDiv.className = 'safe-place-item';
+        itemDiv.innerHTML = `
+            <div class="safe-place-emoji"><img src="/safe.png" style="width: 32px; height: 32px;"></div>
             <div class="safe-place-info">
                 <div class="safe-place-name">${place.name}</div>
                 <div class="safe-place-type">${typeTranslated}</div>
             </div>
             <div class="safe-place-distance">${distanceText}</div>
+        `;
+
+        // Ajouter un écouteur de clic pour afficher la safe place sur la carte et ses détails
+        itemDiv.addEventListener('click', () => {
+            // Centrer la carte sur le lieu sûr
+            if (nearbyMap) {
+                nearbyMap.setCenter({ lat: place.lat, lng: place.lng });
+                nearbyMap.setZoom(16);
+            }
+            // Afficher les détails du lieu
+            displaySafePlaceDetails(place, typeTranslated, distanceText);
+        });
+
+        // Ajouter un curseur pointeur
+        itemDiv.style.cursor = 'pointer';
+
+        listContainer.appendChild(itemDiv);
+    });
+}
+
+// Afficher les détails d'un lieu sûr dans un bottom sheet
+function displaySafePlaceDetails(place, typeTranslated, distanceText) {
+    const detailsSheet = document.createElement('div');
+    detailsSheet.className = 'safe-place-details-modal';
+    detailsSheet.innerHTML = `
+        <div class="safe-place-details-content">
+            <div class="safe-place-details-header">
+                <button class="close-btn" onclick="document.querySelector('.safe-place-details-modal').remove()">✕</button>
+                <img src="/safe.png" style="width: 50px; height: 50px; margin: 10px auto;">
+            </div>
+            <h2>${place.name}</h2>
+            <div class="safe-place-details-info">
+                <div class="detail-row">
+                    <span class="detail-label">Type:</span>
+                    <span class="detail-value">${typeTranslated}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Distance:</span>
+                    <span class="detail-value">${distanceText}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Coordonnées:</span>
+                    <span class="detail-value">${place.lat.toFixed(4)}, ${place.lng.toFixed(4)}</span>
+                </div>
+            </div>
+            <button class="action-btn" onclick="centerMapOnPlace(${place.lat}, ${place.lng})">Voir sur la carte</button>
         </div>
     `;
-    }).join('');
+    document.body.appendChild(detailsSheet);
+
+    // Fermer au clic extérieur
+    detailsSheet.addEventListener('click', (e) => {
+        if (e.target === detailsSheet) {
+            detailsSheet.remove();
+        }
+    });
+}
+
+// Centrer la carte sur un lieu
+function centerMapOnPlace(lat, lng) {
+    if (nearbyMap) {
+        nearbyMap.setCenter({ lat: lat, lng: lng });
+        nearbyMap.setZoom(16);
+    }
 }
 
 // Afficher marqueurs

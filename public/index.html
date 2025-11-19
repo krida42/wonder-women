@@ -28,7 +28,7 @@
                 <div id="nearbyMap"></div>
                 <div class="map-info">
                     <span>🎯 <span id="matchesMapCount">0</span> match(es)</span>
-                    <span class="map-hint">Cliquez sur un marqueur pour discuter</span>
+                    <span class="map-hint">No shared routes available right now</span>
                 </div>
                 <button class="matches-toggle-btn" id="matchesToggleBtn">
                     📋 Voir les matches
@@ -38,19 +38,19 @@
             <!-- Bottom Navigation Bar -->
             <nav class="bottom-navbar">
                 <button class="nav-btn" id="tripBtn">
-                    <span class="nav-icon">🏠</span>
+                    <span class="nav-icon"><img src="home.png" alt="Maison" class="nav-icon-img"></span>
                     <span class="nav-label">Rentrer</span>
                 </button>
                 <button class="nav-btn nav-btn-sos" id="sosBtn">
-                    <span class="nav-icon">🚨</span>
+                    <span class="nav-icon"><img src="sos.png" alt="SOS" class="nav-icon-img"></span>
                     <span class="nav-label">SOS</span>
                 </button>
                 <button class="nav-btn" id="safePlacesBtn">
-                    <span class="nav-icon">🔐</span>
+                    <span class="nav-icon"><img src="safe.png" alt="Lieux sûrs" class="nav-icon-img"></span>
                     <span class="nav-label">Lieux sûrs</span>
                 </button>
                 <button class="nav-btn" id="settingsBtn">
-                    <span class="nav-icon">⚙️</span>
+                    <span class="nav-icon"><img src="parametre.png" alt="Paramètres" class="nav-icon-img"></span>
                     <span class="nav-label">Paramètres</span>
                 </button>
             </nav>
@@ -98,10 +98,7 @@
             <!-- Safe Places Bottom Sheet -->
             <div class="bottom-sheet" id="safePlacesSheet">
                 <div class="bottom-sheet-content">
-                    <div class="bottom-sheet-header">
-                        <div class="bottom-sheet-handle"></div>
-                        <button class="safe-places-close-btn" id="closeSafePlacesBtn">✕</button>
-                    </div>
+                    <div class="bottom-sheet-handle"></div>
                     <h2 class="bottom-sheet-title">🔐 Lieux sûrs à proximité</h2>
                     <div class="safe-places-list" id="safePlacesList">
                         <p class="loading-text">Chargement des lieux sûrs...</p>
@@ -141,7 +138,7 @@
                 <div class="sos-modal-content">
                     <div class="sos-modal-icon">🚨</div>
                     <h2>Envoyer une alerte SOS ?</h2>
-                    <p>Les 20 femmes les plus proches seront alertées de votre situation d'urgence.</p>
+                    <p>Les 20 femmes les plus proches seront alertées de votre situation d'urgence.<br><br>Les contacts de confiance seront aussi alertés.</p>
                     <div class="sos-modal-buttons">
                         <button class="btn-cancel" id="cancelSosBtn">Annuler</button>
                         <button class="btn-sos-confirm" id="confirmSosBtn">🚨 Envoyer l'alerte</button>
